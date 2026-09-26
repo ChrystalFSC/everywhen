@@ -866,7 +866,7 @@ function renderRates() {
 ['VND', 'CNY'].forEach(c => $('#r' + c).addEventListener('input', e => {
   const v = parseFloat(e.target.value.replace(',', '.'));
   const st = $('#rateStatus');
-  if (v > 0) { rates[c] = v; rates.src = 'manual'; rates.when = ''; store.set('rates', rates); st.className = 'status'; st.textContent = t('Using your own rates.'); renderNotes(); renderConv(); }
+  if (v > 0) { rates[c] = v; rates.src = 'manual'; rates.when = ''; store.set('rates', rates); st.className = 'status'; st.textContent = t('Using your own rates.'); renderNotes(); renderConv(); renderExplore(); }
   else { st.className = 'status err'; st.textContent = t('Rates must be numbers above zero.'); }
 }));
 $('#rateBtn').addEventListener('click', async () => {
@@ -880,7 +880,7 @@ $('#rateBtn').addEventListener('click', async () => {
     if (j.result !== 'success' || !j.rates?.VND || !j.rates?.CNY) throw new Error('bad data');
     rates.VND = +j.rates.VND.toFixed(1); rates.CNY = +j.rates.CNY.toFixed(4); rates.src = 'live';
     rates.when = new Date(j.time_last_update_unix * 1000).toLocaleDateString(LOCALE(), { day:'numeric', month:'short', year:'numeric' });
-    store.set('rates', rates); renderRates(); renderNotes(); renderConv();
+    store.set('rates', rates); renderRates(); renderNotes(); renderConv(); renderExplore();
     st.className = 'status ok'; st.textContent = t('Updated. Rates from {when}, saved for offline use.', { when: rates.when });
   } catch {
     st.className = 'status err'; st.textContent = t(navigator.onLine === false ? 'You’re offline. Your saved rates still work.' : 'Couldn’t reach the rate service. Your saved rates still work, or type new ones above.');

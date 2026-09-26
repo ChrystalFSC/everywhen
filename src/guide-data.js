@@ -81,6 +81,94 @@ const ITEMS = [
   G('comtam','sgn','food',2,'Broken rice','Cơm tấm',{ when:'morning', tags:['food'], wiki:'C%C6%A1m_t%E1%BA%A5m', why:'Saigon’s everyday meal.', d:'Broken rice with grilled pork chop, egg and fish sauce.', where:'Street stalls and small eateries' }),
   G('phosgn','sgn','food',2,'Southern phở','Phở',{ when:'morning', tags:['food'], why:'Sweeter than Hanoi’s, with a plate of fresh herbs.', d:'Beef noodle soup with bean sprouts and herbs on the side.', where:'Phở Hòa Pasteur is a long-running favourite' })
 ];
+/* Where to eat each dish: named spots with address and an estimated spend per person in local currency
+   (CNY or VND, early-2027 guesses; prices move, so treat them as a guide). Keyed by food id without the "f-".
+   SP(name, local name, address, local address, low, high, note) */
+const SP = (n, l, a, al, lo, hi, note = '') => ({ n, l, a, al: al || a, p:[lo, hi], note });
+const EAT = {
+  xlb: [
+    SP('Jia Jia Tang Bao', '佳家汤包', '90 Huanghe Rd, Huangpu', '黄浦区黄河路90号', 25, 45, 'Locals’ favourite. Order at the counter.'),
+    SP('Nanxiang Mantou Dian', '南翔馒头店', '85 Yuyuan Rd, Yu Garden', '黄浦区豫园路85号', 35, 100, 'Takeaway window is cheapest; upstairs rooms cost more.'),
+    SP('Din Tai Fung, Xintiandi', '鼎泰丰 新天地店', 'Xintiandi South Block, 123 Xingye Rd', '黄浦区兴业路123弄 新天地南里', 100, 180, 'Reliable and comfortable, with an English menu.')
+  ],
+  sjb: [
+    SP('Yang’s Dumplings, Huanghe Rd', '小杨生煎 黄河路店', '97 Huanghe Rd, Huangpu', '黄浦区黄河路97号', 12, 30, 'Branches all over the city.'),
+    SP('Da Hu Chun', '大壶春', '136 Sichuan Middle Rd, Huangpu', '黄浦区四川中路136号', 12, 25, 'Fluffier, bread-like style. Near the Bund.')
+  ],
+  noodle: [
+    SP('Wei Xiang Zhai', '味香斋', '14 Yandang Rd, Huangpu', '黄浦区雁荡路14号', 15, 30, 'Also famous for sesame-paste noodles.'),
+    SP('A Niang Noodles', '阿娘面馆', '36 Sinan Rd, Huangpu', '黄浦区思南路36号', 25, 60)
+  ],
+  hongshao: [
+    SP('Lao Zheng Xing', '老正兴菜馆', '556 Fuzhou Rd, Huangpu', '黄浦区福州路556号', 120, 200, 'Classic Shanghai restaurant since 1862.'),
+    SP('Jesse', '吉士酒家', '41 Tianping Rd, Xuhui', '徐汇区天平路41号', 100, 180, 'Tiny and busy. Book ahead or go early.')
+  ],
+  wonton: [
+    SP('Ji Xiang Wontons', '吉祥馄饨', 'Chain, branches across the city', '全市连锁', 12, 25),
+    SP('Any breakfast stall', '早餐摊', 'Look for steam and a queue', '', 8, 15)
+  ],
+  tangyuan: [
+    SP('Ningbo Tangtuan Dian', '宁波汤团店', 'Yu Garden bazaar, Yuyuan Rd', '黄浦区豫园路 豫园商城', 15, 35, 'Black-sesame tangyuan is the classic.')
+  ],
+  lanzhou: [
+    SP('Any Lanzhou noodle shop', '兰州牛肉面', 'Look for the green 清真 sign', '', 15, 30, 'Halal.')
+  ],
+  cifan: [
+    SP('Street breakfast stalls', '粢饭团', 'Near metro exits, 6–9 am', '', 5, 12)
+  ],
+  squirrel: [
+    SP('Songhelou', '松鹤楼', '72 Guanqian St, Gusu', '姑苏区观前街72号', 150, 300, 'The fish is shared; one serves 3–4 people.'),
+    SP('Deyuelou', '得月楼', '43 Taijian Lane, Gusu', '姑苏区太监弄43号', 120, 250)
+  ],
+  sznoodle: [
+    SP('Tong De Xing', '同得兴', 'Shiquan St, Gusu', '姑苏区十全街', 25, 60, 'Closes after lunch. Go in the morning.'),
+    SP('Zhu Hong Xing', '朱鸿兴', 'Chain, several branches in the old town', '姑苏区 多家分店', 20, 45)
+  ],
+  biluochun: [
+    SP('Teahouses on Pingjiang Road', '平江路茶馆', 'Pingjiang Rd, Gusu', '姑苏区平江路', 40, 120, 'Check the menu price per pot before ordering.')
+  ],
+  dongpo: [
+    SP('Lou Wai Lou', '楼外楼', '30 Gushan Rd, by West Lake', '西湖区孤山路30号', 120, 220, 'Lake views; the most famous name for Hangzhou dishes.'),
+    SP('Grandma’s Kitchen', '外婆家', 'Chain, many branches in Hangzhou', '杭州多家分店', 60, 100, 'Cheap and cheerful. Expect a queue at dinner.')
+  ],
+  ljshrimp: [
+    SP('Lou Wai Lou', '楼外楼', '30 Gushan Rd, by West Lake', '西湖区孤山路30号', 120, 220),
+    SP('Zhi Wei Guan', '知味观', '83 Renhe Rd, Shangcheng', '上城区仁和路83号', 70, 140, 'Near Hubin, also good for snacks.')
+  ],
+  pianerchuan: [
+    SP('Kui Yuan Guan', '奎元馆', '154 Jiefang Rd, Shangcheng', '上城区解放路154号', 25, 70, 'Running since 1867.')
+  ],
+  phobo: [
+    SP('Phở Gia Truyền', 'Phở Gia Truyền', '49 Bát Đàn, Hoàn Kiếm', '', 50000, 70000, 'Queue, pay first, carry your own bowl.'),
+    SP('Phở Thìn', 'Phở Thìn', '13 Lò Đúc, Hai Bà Trưng', '', 60000, 80000, 'Stir-fried beef on top. Richer broth.')
+  ],
+  buncha: [
+    SP('Bún chả Hương Liên', 'Bún chả Hương Liên', '24 Lê Văn Hưu, Hai Bà Trưng', '', 50000, 100000, 'Where Obama and Bourdain ate.'),
+    SP('Bún chả Đắc Kim', 'Bún chả Đắc Kim', '1 Hàng Mành, Hoàn Kiếm', '', 60000, 90000, 'In the Old Quarter.')
+  ],
+  eggcoffee: [
+    SP('Giảng Café', 'Cà phê Giảng', '39 Nguyễn Hữu Huân, Hoàn Kiếm', '', 35000, 50000),
+    SP('Café Đinh', 'Cà phê Đinh', '13 Đinh Tiên Hoàng (1st floor), Hoàn Kiếm', '', 30000, 45000, 'Views over Hoan Kiem Lake.')
+  ],
+  chaca: [
+    SP('Chả Cá Thăng Long', 'Chả Cá Thăng Long', '21–31 Đường Thành, Hoàn Kiếm', '', 150000, 200000),
+    SP('Chả Cá Lã Vọng', 'Chả Cá Lã Vọng', '14 Chả Cá, Hoàn Kiếm', '', 170000, 250000, 'The original, since the 1800s.')
+  ],
+  banhmi: [
+    SP('Bánh Mì Huỳnh Hoa', 'Bánh Mì Huỳnh Hoa', '26 Lê Thị Riêng, District 1', '', 60000, 75000, 'Huge and packed with meat.'),
+    SP('Any street cart', 'Bánh mì', 'Everywhere in District 1', '', 20000, 35000)
+  ],
+  comtam: [
+    SP('Cơm Tấm Ba Ghiền', 'Cơm Tấm Ba Ghiền', '84 Đặng Văn Ngữ, Phú Nhuận', '', 60000, 100000, 'Close to the airport.'),
+    SP('Street stalls', 'Cơm tấm', 'Everywhere, from early morning', '', 35000, 60000)
+  ],
+  phosgn: [
+    SP('Phở Hòa Pasteur', 'Phở Hòa Pasteur', '260C Pasteur, District 3', '', 80000, 110000, 'Opens about 5:30 am.'),
+    SP('Phở Lệ', 'Phở Lệ', '413 Nguyễn Trãi, District 5', '', 70000, 100000)
+  ]
+};
+ITEMS.forEach(i => { if (i.k === 'food') i.spots = EAT[i.id.slice(2)] || []; });
+
 const BY = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 
 /* Honest warnings: things we do NOT recommend, and what to do instead. */

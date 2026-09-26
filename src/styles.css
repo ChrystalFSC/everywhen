@@ -729,3 +729,21 @@ p{margin:0}
 .pass.ret{--c:#7A5A00}
 .chip.ret{background:var(--butter);color:#6E5000;border-color:rgba(232,178,26,.4)}
 .chip.out{background:var(--lilac);color:var(--out);border-color:rgba(139,108,240,.3)}
+
+/* Food: where to eat, with address, estimated spend and map links */
+.chip.gold{background:var(--butter);color:#6E5000;border-color:rgba(232,178,26,.4)}
+.spots{display:grid;gap:8px;margin-top:2px}
+.spots-h{font:700 10.5px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.spots ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.spot{display:grid;gap:5px;padding:11px 12px;border-radius:14px;background:#fff;border:1px solid var(--line)}
+.spot-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.spot-top b{font-size:14px;color:var(--ink)}
+.spot-top .local{font-size:13px;margin:0}
+.spot-addr{display:flex;gap:6px;align-items:flex-start;font-size:12.5px;color:var(--muted)}
+.spot-addr svg{flex:none;width:14px;height:14px;margin-top:1px;color:var(--out)}
+.spot-meta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.spot-price{font:700 12px/1.3 var(--f-mono);color:#6E5000;background:var(--butter);padding:3px 7px;border-radius:7px}
+.spot-note{font-size:12.5px;color:var(--muted)}
+.spot-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.spot-acts .sbtn{text-decoration:none;display:inline-flex;align-items:center;min-height:36px}
+.spots-foot{font-size:11.5px !important;color:var(--dim) !important;opacity:1 !important}

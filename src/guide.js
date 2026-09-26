@@ -231,6 +231,30 @@ function dayChoices(city) {
   return DAYS.filter(x => x.cities.includes(city)).map(x => `<option value="${x.d}">${dayShort(x.d)}</option>`).join('')
     || CHOOSABLE.map(d => `<option value="${d}">${dayShort(d)} · ${t('switch back to {city}', { city: cityName(city) })}</option>`).join('');
 }
+/* Food spots: local price with a ringgit estimate, a map link (Amap in China, where Google is blocked; Google Maps in Vietnam) */
+const CUR = c => CITIES[c].lang === 'zh' ? 'CNY' : 'VND';
+function priceText(c, [lo, hi]) {
+  const cur = CUR(c), r = +rates[cur], k = n => n >= 1000 ? Math.round(n / 1000) + 'k' : n;
+  const local = cur === 'CNY' ? `¥${lo}–${hi}` : `${k(lo)}–${k(hi)} ₫`;
+  const rm = r > 0 ? ` · ≈ RM ${Math.round(lo / r)}–${Math.round(hi / r)}` : '';
+  return t('{p} per person', { p: local + rm });
+}
+function mapUrl(c, s) {
+  if (CITIES[c].lang === 'zh') return `https://uri.amap.com/search?keyword=${encodeURIComponent(s.l)}&city=${encodeURIComponent(CITIES[c].l)}&callnative=1`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.n + ', ' + s.a + ', ' + CITIES[c].n)}`;
+}
+function spotsHtml(it) {
+  const zh = CITIES[it.c].lang === 'zh', pin = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+  return `<div class="spots"><div class="spots-h">${t('Where to eat')}</div><ul>${it.spots.map((s, i) => {
+    const name = LANG === 'zh' && zh ? s.l : s.n, sub = zh && LANG !== 'zh' ? s.l : '';
+    const addr = LANG === 'zh' && zh ? s.al : t(s.a);
+    return `<li class="spot">
+      <div class="spot-top"><b>${esc(name)}</b>${sub ? `<span class="local" lang="zh-CN">${esc(sub)}</span>` : ''}</div>
+      <div class="spot-addr">${pin}<span>${esc(addr)}</span></div>
+      <div class="spot-meta"><span class="spot-price">${priceText(it.c, s.p)}</span>${s.note ? `<span class="spot-note">${esc(t(s.note))}</span>` : ''}</div>
+      <div class="spot-acts"><a class="sbtn" href="${mapUrl(it.c, s)}" target="_blank" rel="noopener">${t(zh ? 'Open in Amap' : 'Open in Google Maps')}</a>${/\d|Rd|St|Lane/.test(s.a) ? `<button class="sbtn" type="button" data-spot="${it.id}:${i}">${t('Show to driver')}</button>` : ''}</div>
+    </li>`; }).join('')}</ul><p class="spots-foot">${t('Prices are estimates. Rates from the Money tab.')}</p></div>`;
+}
 function renderExplore() {
   const kind = xKind;
   $('#xContext').innerHTML = kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
@@ -255,11 +279,11 @@ function renderExplore() {
     const lng = CITIES[it.c].lang === 'zh' ? 'zh-CN' : 'vi';
     return `<article class="xcard">${cover(it)}<div class="xbody">
       <div><h3>${esc(nameOf(it))}</h3>${LANG === 'zh' && hasCJK(it.l) ? `<div class="local">${esc(it.n)}</div>` : it.l !== it.n ? `<div class="local" lang="${lng}">${esc(it.l)}</div>` : ''}</div>
-      <div class="chips">${it.k === 'place' ? `<span class="chip out">${t(WHEN_LABEL[it.when])}</span><span class="chip">${fmtHrs(it.hrs)}</span>` : ''}${on.length ? `<span class="chip good">${t('In plan · {days}', { days: on.join(', ') })}</span>` : ''}</div>
+      <div class="chips">${it.k === 'place' ? `<span class="chip out">${t(WHEN_LABEL[it.when])}</span><span class="chip">${fmtHrs(it.hrs)}</span>` : it.spots?.length ? `<span class="chip gold">${priceText(it.c, [Math.min(...it.spots.map(s => s.p[0])), Math.max(...it.spots.map(s => s.p[1]))])}</span>` : ''}${on.length ? `<span class="chip good">${t('In plan · {days}', { days: on.join(', ') })}</span>` : ''}</div>
       <p class="why">${esc(t(it.why))}</p>
       <p>${esc(t(it.d))}</p>
       ${it.tip ? `<div class="tip">${tipIcon}<span>${esc(t(it.tip))}</span></div>` : ''}
-      <div class="how">${esc(it.k === 'food' ? t('Try: {w}', { w: t(it.where) }) : t(it.how))}</div>
+      ${it.k === 'food' && it.spots?.length ? spotsHtml(it) : `<div class="how">${esc(it.k === 'food' ? t('Try: {w}', { w: t(it.where) }) : t(it.how))}</div>`}
       <div class="acts">
         <select class="sel" id="add-${it.id}" aria-label="${t('Day to add {n} to', { n: esc(nameOf(it)) })}">${dayChoices(it.c)}</select>
         <button class="sbtn primary" type="button" data-add="${it.id}">Add to plan</button>
@@ -270,7 +294,13 @@ function renderExplore() {
   }).join('');
 }
 $('#xGrid').addEventListener('click', async e => {
-  const a = e.target.closest('[data-add]'), s = e.target.closest('[data-show]'), c = e.target.closest('[data-copy]');
+  const a = e.target.closest('[data-add]'), s = e.target.closest('[data-show]'), c = e.target.closest('[data-copy]'), sp = e.target.closest('[data-spot]');
+  if (sp) {
+    const [id, ix] = sp.dataset.spot.split(':'), it = BY[id], x = it.spots[+ix], lg = CITIES[it.c].lang === 'zh' ? 'zh' : 'vi';
+    const addr = lg === 'zh' ? x.al : x.a;
+    openShow((lg === 'zh' ? '请带我去：' : 'Làm ơn đưa tôi đến: ') + x.l, addr, t('Please take me to: {n}', { n: x.n + ' · ' + x.a }), lg);
+    return;
+  }
   if (a) {
     const id = a.dataset.add, d = +$('#add-' + id).value, it = BY[id];
     if (!dayOf(d).slots && plan.base[d] !== it.c) { plan.base[d] = it.c; plan.items[d] = plan.items[d].filter(x => { const y = getItem(x); return y.custom || y.c === it.c; }); }
