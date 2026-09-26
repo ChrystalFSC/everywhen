@@ -1,0 +1,1076 @@
+<title>Everywhen</title>
+<meta name="description" content="An offline travel companion for KUL, Ho Chi Minh City, Shanghai and Hanoi.">
+<style>
+__STYLES__
+</style>
+
+<div class="sky" id="sky" aria-hidden="true"><canvas id="stars"></canvas></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="app" id="app" data-tab="trip">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M4 18C7 9 13 5 20 6" stroke="url(#mk)" stroke-width="2.4"/><circle cx="4" cy="18" r="2.2" fill="#5B3FC4"/><circle cx="20" cy="6" r="2.2" fill="#E8B21A"/><defs><linearGradient id="mk" x1="4" y1="18" x2="20" y2="6" gradientUnits="userSpaceOnUse"><stop stop-color="#8B6CF0"/><stop offset="1" stop-color="#E8B21A"/></linearGradient></defs></svg></span>
+      <div><h1>Everywhen</h1><span class="route">KUL · SGN · PVG · HAN · KUL</span></div>
+    </div>
+    <div class="top-r"><button class="lang-btn" id="langBtn" type="button">中文</button><div class="count" id="countdown" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="countText">Loading trip…</span></div></div>
+  </header>
+
+  <div class="layout">
+    <!-- Map stage -->
+    <section class="stage" aria-label="Route map and trip scrubber">
+      <div class="map-wrap">
+        <canvas id="map" role="img" aria-label="Map of the route: Kuala Lumpur to Ho Chi Minh City to Shanghai, returning through Hanoi to Kuala Lumpur."></canvas>
+        <div class="sunmoon" id="sunmoon" aria-hidden="true"></div>
+        <div class="map-legend" aria-hidden="true"><span><i style="background:var(--route-out)"></i>Outbound</span><span><i style="background:var(--route-ret)"></i>Return</span></div>
+      </div>
+      <div class="readout">
+        <div class="ro-head">
+          <div style="display:grid;gap:6px;min-width:0">
+            <div class="ro-phase" id="roPhase"></div>
+            <div class="ro-title" id="roTitle" aria-live="polite"></div>
+            <div class="ro-sub" id="roSub"></div>
+          </div>
+          <div class="board">
+            <div class="flap sm" id="flapCode" aria-hidden="true"></div>
+            <div class="flap" id="flapTime" aria-hidden="true"></div>
+            <span class="sr" id="roTime">--:--</span>
+            <div class="small" id="roZone"></div>
+            <div class="small" id="roHome"></div>
+          </div>
+        </div>
+        <div class="scrub-row">
+          <button class="icon-btn" id="playBtn" type="button" aria-label="Play the whole trip">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" id="playIcon"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+          </button>
+          <div class="track">
+            <div class="track-bar" id="trackBar" aria-hidden="true"></div>
+            <input type="range" id="scrub" min="0" max="1000" step="1" value="0" aria-label="Move through the trip">
+          </div>
+          <button class="text-btn" id="nowBtn" type="button">Now</button>
+        </div>
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+        <p class="scale-note">Flights are stretched on this bar so you can follow them. Drag it or use the arrow keys.</p>
+      </div>
+    </section>
+
+    <div class="side">
+      <nav class="tabs" aria-label="Sections">
+        <div class="tabs-in" role="tablist"><span class="tab-ind" id="tabInd" aria-hidden="true"></span>
+          <button class="tab" role="tab" id="tab-trip" aria-controls="panel-trip" aria-selected="true" data-tab="trip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c4-1 6-9 10-10s5 4 8 3"/><circle cx="3" cy="17" r="1.6"/><circle cx="21" cy="10" r="1.6"/></svg>Trip</button>
+          <button class="tab" role="tab" id="tab-plan" aria-controls="panel-plan" aria-selected="false" tabindex="-1" data-tab="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h3M8 17h6"/></svg>Plan</button>
+          <button class="tab" role="tab" id="tab-explore" aria-controls="panel-explore" aria-selected="false" tabindex="-1" data-tab="explore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>Explore</button>
+          <button class="tab" role="tab" id="tab-weather" aria-controls="panel-weather" aria-selected="false" tabindex="-1" data-tab="weather"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7 10.5 3.75 3.75 0 0 0 7 18z"/><path d="M15 4.5V3M19.5 6.5l1-1"/></svg>Weather</button>
+          <button class="tab" role="tab" id="tab-say" aria-controls="panel-say" aria-selected="false" tabindex="-1" data-tab="say"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="3"/><path d="M8 21l4-4"/><path d="M8 9h8M8 12.5h5"/></svg>Say</button>
+          <button class="tab" role="tab" id="tab-money" aria-controls="panel-money" aria-selected="false" tabindex="-1" data-tab="money"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></svg>Money</button>
+        </div>
+      </nav>
+
+      <!-- TRIP -->
+      <section class="panel" id="panel-trip" role="tabpanel" aria-labelledby="tab-trip" tabindex="0">
+        <div class="clocks" id="clocks"></div>
+        <div class="journey" id="journey"></div>
+        <div class="sec-head"><h2>Where you sleep</h2><p>8 nights, 17–24 Feb</p></div>
+        <div class="nights" id="nights"></div>
+        <div class="legend">
+          <span><i style="background:var(--good)"></i>Booked</span>
+          <span><i style="background:repeating-linear-gradient(90deg,var(--warn) 0 4px,transparent 4px 7px)"></i>Not booked yet</span>
+          <span><i style="background:repeating-linear-gradient(90deg,var(--muted) 0 2px,transparent 2px 5px)"></i>Overnight transfer</span>
+        </div>
+      </section>
+
+      <!-- SAY -->
+      <section class="panel" id="panel-say" role="tabpanel" aria-labelledby="tab-say" tabindex="0" hidden>
+        <div class="sec-head"><h2>Say it</h2><p>Type or speak, then show it or play it aloud.</p></div>
+        <div class="tr glass">
+          <div class="seg" id="trDir" role="group" aria-label="Translate direction">
+            <button type="button" data-v="en|zh-CN" aria-pressed="true">English → 中文</button>
+            <button type="button" data-v="en|vi" aria-pressed="false">English → Tiếng Việt</button>
+            <button type="button" data-v="zh-CN|en" aria-pressed="false">中文 → English</button>
+            <button type="button" data-v="vi|en" aria-pressed="false">Tiếng Việt → English</button>
+          </div>
+          <div class="tr-in">
+            <label class="sr" for="trText">Text to translate</label>
+            <textarea id="trText" rows="2" placeholder="Type what you want to say…" lang="en-GB"></textarea>
+            <button class="mic" id="trMic" type="button" aria-label="Speak instead of typing" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></button>
+          </div>
+          <div class="tr-out" id="trOut" aria-live="polite"></div>
+          <p class="hint">Phrasebook matches are checked and work offline. Anything else is machine-translated by MyMemory when you are online, so the text you type is sent to their service. For offline translation of anything, download Chinese and Vietnamese in Apple’s Translate app before you fly.</p>
+        </div>
+        <div class="sec-head" style="margin-top:6px"><h2 style="font-size:24px">Phrasebook</h2><p>Checked phrases. Tap one to show it full screen.</p></div>
+        <div class="seg" id="sayLang" role="group" aria-label="Language">
+          <button type="button" data-lang="zh" aria-pressed="true">中文 · Shanghai</button>
+          <button type="button" data-lang="vi" aria-pressed="false">Tiếng Việt · Vietnam</button>
+        </div>
+        <div class="addr glass" id="addrBox"></div>
+        <div id="phraseGroups" style="display:grid;gap:14px"></div>
+        <div class="group">
+          <h3>Emergency numbers</h3>
+          <div class="sos" id="sos"></div>
+        </div>
+      </section>
+
+      <!-- MONEY -->
+      <section class="panel" id="panel-money" role="tabpanel" aria-labelledby="tab-money" tabindex="0" hidden>
+        <div class="sec-head"><h2>Money</h2><p>Type a price the way it is written. 350k, 1.5tr and 350.000 all work.</p></div>
+        <div class="seg" role="group" aria-label="Currency">
+          <button type="button" data-cur="VND" aria-pressed="true">₫ Vietnamese dong</button>
+          <button type="button" data-cur="CNY" aria-pressed="false">¥ Chinese yuan</button>
+        </div>
+        <div class="conv glass">
+          <div class="conv-in">
+            <label class="cur" for="amtIn" id="amtCur">VND</label>
+            <input id="amtIn" inputmode="decimal" autocomplete="off" spellcheck="false" value="350k" aria-describedby="convOut">
+            <button class="swap" id="swapBtn" type="button" aria-label="Swap direction">⇅ Swap</button>
+          </div>
+          <div class="conv-out" id="convOut" aria-live="polite"></div>
+        </div>
+        <div class="group">
+          <h3 id="notesTitle">Banknotes in Ringgit</h3>
+          <div class="notes" id="notes"></div>
+        </div>
+        <div class="callout" id="noteWarn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5v.01"/></svg>
+          <span></span>
+        </div>
+        <div class="rates glass">
+          <div class="sec-head"><h2 style="font-size:16px">Exchange rates</h2></div>
+          <div class="rates-row">
+            <label class="rate-in" for="rVND"><span>RM 1 =</span><input id="rVND" inputmode="decimal" autocomplete="off"><span>VND</span></label>
+            <label class="rate-in" for="rCNY"><span>RM 1 =</span><input id="rCNY" inputmode="decimal" autocomplete="off"><span>CNY</span></label>
+          </div>
+          <div class="rates-foot">
+            <span class="status" id="rateStatus" aria-live="polite"></span>
+            <button class="btn ghost" id="rateBtn" type="button">Update rates</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLAN -->
+      <section class="panel" id="panel-plan" role="tabpanel" aria-labelledby="tab-plan" tabindex="0" hidden>
+        <div class="sec-head"><h2>Your days</h2><p id="planSum"></p></div>
+        <div class="builder glass">
+          <div class="b-row"><span class="eyebrow">Pace</span><div class="seg" id="bPace" role="group" aria-label="Pace"></div></div>
+          <div class="b-row"><span class="eyebrow">I love</span><div class="picks" id="bInt" role="group" aria-label="Interests"></div></div>
+          <div class="b-row"><span class="eyebrow">Day trips from Shanghai</span><div class="picks" id="bTrips" role="group" aria-label="Day trips"></div></div>
+          <div class="b-act"><button class="btn" id="bBuild" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.5L12 15l-1.8-4.5L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .7-.8 2-.8-2-2-.7 2-.8z"/></svg>Build my plan</button><button class="sbtn" id="planClear" type="button">Clear all stops</button></div>
+          <ul class="b-notes" id="bNotes" aria-live="polite"></ul>
+        </div>
+        <div class="checker glass">
+          <div class="sec-head"><h2 style="font-size:24px">Can I go to…?</h2><p>Type any place: a sight, town, restaurant or hotel. We check whether it suits this trip.</p></div>
+          <form class="ck-in" id="ckForm" autocomplete="off"><label class="sr" for="ckQ">Place to check</label><div class="ck-box"><input class="txt" id="ckQ" placeholder="e.g. Wuzhen, Nanjing, Beijing, 乌镇" role="combobox" aria-autocomplete="list" aria-controls="ckList" aria-expanded="false"><ul class="ac" id="ckList" role="listbox" aria-label="Suggestions" hidden></ul></div><button class="btn" type="submit">Check</button></form>
+          <div class="tr-ex" id="ckEx"><span class="eyebrow">Try</span><button class="pill" type="button" data-q="Wuzhen">Wuzhen</button><button class="pill" type="button" data-q="Nanjing">Nanjing</button><button class="pill" type="button" data-q="Beijing">Beijing</button><button class="pill" type="button" data-q="Ha Long Bay">Ha Long Bay</button><button class="pill" type="button" data-q="West Lake">West Lake</button><button class="pill" type="button" data-q="Oriental Pearl Tower">Oriental Pearl Tower</button></div>
+          <div id="ckOut" aria-live="polite"></div>
+        </div>
+        <div class="days" id="days"></div>
+        <div class="sec-head"><h2>Before you fly</h2><p>Things specific to this route.</p></div>
+        <div class="prog glass">
+          <svg viewBox="0 0 52 52" aria-hidden="true"><circle class="ring-bg" cx="26" cy="26" r="22" fill="none" stroke-width="6"/><circle class="ring" id="ring" cx="26" cy="26" r="22" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2"/></svg>
+          <div><b id="progText">0 of 0</b><div class="hint" id="progSub">ready</div></div>
+        </div>
+        <div class="checks" id="checks"></div>
+        <p class="footer-note">Everywhen runs entirely inside this one file. Its fonts and map are built in, and it loads nothing from Google or any other service, so it keeps working on Chinese networks and with no signal. Your ticks and notes stay on this device only.</p>
+      </section>
+
+      <!-- EXPLORE -->
+      <section class="panel" id="panel-explore" role="tabpanel" aria-labelledby="tab-explore" tabindex="0" hidden>
+        <div class="sec-head"><h2>Explore</h2><p>Ranked picks for the time you actually have.</p></div>
+        <div class="filters">
+          <div class="seg" role="group" aria-label="City" id="xCity">
+            <button type="button" data-v="sh" aria-pressed="true">Shanghai</button>
+            <button type="button" data-v="sz" aria-pressed="false">Suzhou</button>
+            <button type="button" data-v="hz" aria-pressed="false">Hangzhou</button>
+            <button type="button" data-v="han" aria-pressed="false">Hanoi</button>
+            <button type="button" data-v="sgn" aria-pressed="false">Ho Chi Minh City</button>
+          </div>
+          <div class="seg" role="group" aria-label="Type" id="xKind">
+            <button type="button" data-v="place" aria-pressed="true">Places</button>
+            <button type="button" data-v="food" aria-pressed="false">Food</button>
+            <button type="button" data-v="stay" aria-pressed="false">Where to stay</button>
+            <button type="button" data-v="skip" aria-pressed="false">Skip these</button>
+          </div>
+        </div>
+        <p class="context glass" id="xContext"></p>
+        <p class="rank-note" id="xRank">Sorted best first. ★ Top pick, then Worth it, then If you have time. These are our editors’ picks, not live star ratings. Tap <b>Reviews</b> to copy a place’s Chinese name for Dianping (大众点评) or Trip.com.</p>
+        <div class="xgrid" id="xGrid"></div>
+      </section>
+
+      <!-- WEATHER -->
+      <section class="panel" id="panel-weather" role="tabpanel" aria-labelledby="tab-weather" tabindex="0" hidden>
+        <div class="sec-head"><h2>Weather</h2><p>What February is usually like, plus a live forecast.</p></div>
+        <div class="seg" role="group" aria-label="City" id="wCity">
+          <button type="button" data-v="sh" aria-pressed="true">Shanghai</button>
+          <button type="button" data-v="han" aria-pressed="false">Hanoi</button>
+          <button type="button" data-v="sz" aria-pressed="false">Suzhou</button>
+          <button type="button" data-v="hz" aria-pressed="false">Hangzhou</button>
+          <button type="button" data-v="sgn" aria-pressed="false">Ho Chi Minh City</button>
+          <button type="button" data-v="kul" aria-pressed="false">Kuala Lumpur</button>
+        </div>
+        <div class="wx-hero" id="wxHeroWrap"><canvas id="wxScene" aria-hidden="true"></canvas><div id="wxHero" style="display:grid;gap:14px"></div></div>
+        <div class="fc glass" id="wxLive"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<!-- Show overlay -->
+<div class="show" id="show" role="dialog" aria-modal="true" aria-labelledby="showText" hidden>
+  <div class="show-card">
+    <div class="show-top">
+      <span class="eyebrow" id="showLang"></span>
+      <button class="btn ghost" id="showClose" type="button" style="background:#efece2;color:#101010">Close</button>
+    </div>
+    <div class="show-text" id="showText"></div>
+    <div class="show-ro" id="showRo"></div>
+    <div class="show-en" id="showEn"></div>
+    <div class="show-actions">
+      <button class="btn" id="showSpeak" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>Read aloud</button>
+      <button class="btn ghost" id="showCopy" type="button">Copy text</button>
+    </div>
+    <div class="show-msg" id="showMsg" aria-live="polite"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
+let reduced = reduceMQ.matches;
+reduceMQ.addEventListener?.('change', e => { reduced = e.matches; });
+
+/* ---------------- storage (optional convenience) ---------------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('everywhen:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('everywhen:' + k, JSON.stringify(v)); } catch {} }
+};
+
+/* __I18N__ */
+
+/* ---------------- trip data ---------------- */
+const H = 3600e3, M = 60e3, D = 24 * H;
+const at = (y, mo, d, h, mi, off) => Date.UTC(y, mo - 1, d, h - off, mi);
+const CITY = {
+  KUL: { code:'KUL', city:'Kuala Lumpur', airport:'Kuala Lumpur Intl', tz:'Asia/Kuala_Lumpur', off:8, lat:2.7456, lon:101.7072, lbl:[12, 4, 'left'] },
+  SGN: { code:'SGN', city:'Ho Chi Minh City', airport:'Tan Son Nhat Intl', tz:'Asia/Ho_Chi_Minh', off:7, lat:10.8188, lon:106.6519, lbl:[12, 4, 'left'] },
+  HAN: { code:'HAN', city:'Hanoi', airport:'Noi Bai Intl', tz:'Asia/Ho_Chi_Minh', off:7, lat:21.2212, lon:105.8072, lbl:[-12, 4, 'right'] },
+  PVG: { code:'PVG', city:'Shanghai', airport:'Pudong Intl', tz:'Asia/Shanghai', off:8, lat:31.1443, lon:121.8083, lbl:[-12, -10, 'right'] }
+};
+const LEGS = [
+  { no:'VN678', from:'KUL', to:'SGN', fT:'T1', tT:'T2', dep:at(2027,2,17,19,50,8), arr:at(2027,2,17,21,0,7), ac:'Airbus A321', svc:'Meal', dir:'out' },
+  { no:'VN524', from:'SGN', to:'PVG', fT:'T2', tT:'T1', dep:at(2027,2,18,9,20,7), arr:at(2027,2,18,14,15,8), ac:'Airbus A350-900', svc:'Meal', dir:'out' },
+  { no:'VN533', from:'PVG', to:'HAN', fT:'T1', tT:'T2', dep:at(2027,2,24,15,25,8), arr:at(2027,2,24,18,5,7), ac:'Airbus A321', svc:'Snacks', dir:'ret' },
+  { no:'VN681', from:'HAN', to:'KUL', fT:'T2', tT:'T1', dep:at(2027,2,25,14,50,7), arr:at(2027,2,25,19,10,8), ac:'Airbus A321', svc:'Snacks', dir:'ret' }
+];
+const MIDO_DEADLINE = at(2027,2,21,18,0,8);
+const TRIP_START = LEGS[0].dep - 3 * H, TRIP_END = LEGS[3].arr + 90 * M;
+const SEGS = [
+  { kind:'ground', city:'KUL', t0:TRIP_START, t1:LEGS[0].dep, w:5, stage:'pre' },
+  { kind:'air', leg:0, w:14 },
+  { kind:'ground', city:'SGN', t0:LEGS[0].arr, t1:LEGS[1].dep, w:11, stage:'transfer' },
+  { kind:'air', leg:1, w:14 },
+  { kind:'ground', city:'PVG', t0:LEGS[1].arr, t1:LEGS[2].dep, w:17, stage:'stay' },
+  { kind:'air', leg:2, w:14 },
+  { kind:'ground', city:'HAN', t0:LEGS[2].arr, t1:LEGS[3].dep, w:11, stage:'transfer' },
+  { kind:'air', leg:3, w:14 }
+];
+SEGS.forEach(s => { if (s.kind === 'air') { s.t0 = LEGS[s.leg].dep; s.t1 = LEGS[s.leg].arr; } });
+SEGS.push({ kind:'ground', city:'KUL', t0:LEGS[3].arr, t1:TRIP_END, w:0, stage:'home' });
+{ const tot = SEGS.reduce((a, s) => a + s.w, 0); let c = 0; SEGS.forEach(s => { s.c0 = c / tot; c += s.w; s.c1 = c / tot; }); SEGS[SEGS.length-2].c1 = 1; SEGS[SEGS.length-1].c0 = SEGS[SEGS.length-1].c1 = 1; }
+
+const NIGHTS = [
+  { d:17, place:'Ho Chi Minh City', short:'HCMC', kind:'transit', note:'Transfer night. Airside or a room nearby.' },
+  { d:18, place:'Shanghai', short:'Shanghai', kind:'open', note:'Not booked yet' },
+  { d:19, place:'Shanghai', short:'Shanghai', kind:'open', note:'Not booked yet' },
+  { d:20, place:'Shanghai', short:'Shanghai', kind:'open', note:'Not booked yet' },
+  { d:21, place:'Shanghai', short:'Shanghai', kind:'open', note:'Not booked yet' },
+  { d:22, place:'Shanghai Mido Resort Homestay', short:'Mido', kind:'booked', note:'Booked · free cancellation until 21 Feb 18:00' },
+  { d:23, place:'Shanghai Mido Resort Homestay', short:'Mido', kind:'booked', note:'Booked' },
+  { d:24, place:'Hanoi', short:'Hanoi', kind:'transit', note:'Transfer night. Airside or a room nearby.' }
+];
+
+/* ---------------- time formatting ---------------- */
+const fmtCache = {};
+const F = (tz, opts) => { const k = LANG + tz + JSON.stringify(opts); return fmtCache[k] || (fmtCache[k] = new Intl.DateTimeFormat(LOCALE(), { timeZone: tz, ...opts })); };
+const hm = (t, tz) => F(tz, { hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).format(t);
+const day = (t, tz) => F(tz, { weekday:'short', day:'numeric', month:'short' }).format(t);
+const parts = (t, tz) => Object.fromEntries(F(tz, { year:'numeric', month:'numeric', day:'numeric', hour:'numeric', hourCycle:'h23' }).formatToParts(t).map(p => [p.type, p.value]));
+const dur = ms => { ms = Math.max(0, ms); const d = Math.floor(ms / D), h = Math.floor(ms % D / H), m = Math.round(ms % H / M);
+  if (LANG === 'zh') { if (d >= 2) return `${d}天`; if (d) return `${d}天${h}小时`; if (!h) return `${m}分钟`; return m ? `${h}小时${m}分` : `${h}小时`; }
+  if (d >= 2) return `${d} days`; if (d) return `${d}d ${h}h`; if (!h) return `${m}m`; return m ? `${h}h ${m}m` : `${h}h`; };
+const gmt = off => `GMT+${off}`;
+
+/* ---------------- map ---------------- */
+const GRID = __GRID__;
+const canvas = $('#map'), ctx = canvas.getContext('2d');
+const dotsCanvas = document.createElement('canvas');
+let W = 0, Hh = 0, dpr = 1, proj = null, colors = {};
+const landBits = (() => { const b = atob(GRID.b64); const a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; })();
+const isLand = (r, c) => { const i = r * GRID.cols + c; return (landBits[i >> 3] >> (i & 7)) & 1; };
+const KX = Math.cos(17 * Math.PI / 180);
+
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  ['sea','land','grid','out','ret','ink','muted','surface','line','f-mono','f-sans','f-display'].forEach(k => colors[k] = cs.getPropertyValue('--' + k).trim());
+  colors.out = cs.getPropertyValue('--route-out').trim(); colors.ret = cs.getPropertyValue('--route-ret').trim();
+}
+function fit() {
+  const r = canvas.getBoundingClientRect();
+  if (!r.width || !r.height) return false;
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = r.width; Hh = r.height;
+  canvas.width = Math.round(W * dpr); canvas.height = Math.round(Hh * dpr);
+  // Fit the route's bounding box (with room for labels), centred.
+  const b = { lon0: 98.5, lon1: 125, lat0: -0.5, lat1: 34.5 };
+  const bw = (b.lon1 - b.lon0) * KX, bh = b.lat1 - b.lat0;
+  const s = Math.min((W - 24) / bw, (Hh - 24) / bh);
+  const cx = (b.lon0 + b.lon1) / 2, cy = (b.lat0 + b.lat1) / 2;
+  proj = { s, x: lon => W / 2 + (lon - cx) * KX * s, y: lat => Hh / 2 - (lat - cy) * s };
+  buildDots();
+  return true;
+}
+function buildDots() {
+  dotsCanvas.width = canvas.width; dotsCanvas.height = canvas.height;
+  const d = dotsCanvas.getContext('2d');
+  d.setTransform(dpr, 0, 0, dpr, 0, 0);
+  d.clearRect(0, 0, W, Hh);
+  const step = GRID.st * proj.s;
+  // faint graticule
+  d.strokeStyle = colors.grid; d.lineWidth = 1;
+  for (let lat = 0; lat <= 40; lat += 10) { const y = proj.y(lat); d.beginPath(); d.moveTo(0, y); d.lineTo(W, y); d.stroke(); }
+  for (let lon = 90; lon <= 130; lon += 10) { const x = proj.x(lon); d.beginPath(); d.moveTo(x, 0); d.lineTo(x, Hh); d.stroke(); }
+  d.fillStyle = colors.land;
+  const rad = Math.max(0.8, Math.min(2.4, step * 0.3));
+  for (let r = 0; r < GRID.rows; r++) for (let c = 0; c < GRID.cols; c++) {
+    if (!isLand(r, c)) continue;
+    const lon = GRID.W[0] + (c + .5) * GRID.st, lat = GRID.H[1] - (r + .5) * GRID.st;
+    const x = proj.x(lon), y = proj.y(lat);
+    if (x < -4 || y < -4 || x > W + 4 || y > Hh + 4) continue;
+    d.beginPath(); d.arc(x, y, rad, 0, 6.2832); d.fill();
+  }
+  // fade the grid edge into the sea so the data boundary never shows
+  d.globalCompositeOperation = 'destination-out';
+  const fadeEdge = (x, y, w, h, gx0, gy0, gx1, gy1) => { const gr = d.createLinearGradient(gx0, gy0, gx1, gy1); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = gr; d.fillRect(x, y, w, h); };
+  const ex0 = proj.x(GRID.W[0]), ex1 = proj.x(GRID.W[1]), ey0 = proj.y(GRID.H[1]), ey1 = proj.y(GRID.H[0]);
+  const f = 36;
+  if (ex0 > -f) { d.fillStyle = '#000'; d.fillRect(0, 0, Math.max(0, ex0), Hh); fadeEdge(ex0, 0, f, Hh, ex0, 0, ex0 + f, 0); }
+  if (ex1 < W + f) { d.fillStyle = '#000'; d.fillRect(ex1, 0, W, Hh); fadeEdge(ex1 - f, 0, f, Hh, ex1, 0, ex1 - f, 0); }
+  if (ey0 > -f) { d.fillStyle = '#000'; d.fillRect(0, 0, W, Math.max(0, ey0)); fadeEdge(0, ey0, W, f, 0, ey0, 0, ey0 + f); }
+  if (ey1 < Hh + f) { d.fillStyle = '#000'; d.fillRect(0, ey1, W, Hh); fadeEdge(0, ey1 - f, W, f, 0, ey1, 0, ey1 - f); }
+  d.globalCompositeOperation = 'source-over';
+}
+const pt = code => ({ x: proj.x(CITY[code].lon), y: proj.y(CITY[code].lat) });
+function curve(leg) {
+  const a = pt(leg.from), b = pt(leg.to);
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y;
+  const k = leg.dir === 'out' ? 0.2 : -0.2;
+  return { a, b, c: { x: mx - dy * k, y: my + dx * k } };
+}
+const bez = (q, t) => { const u = 1 - t; return { x: u*u*q.a.x + 2*u*t*q.c.x + t*t*q.b.x, y: u*u*q.a.y + 2*u*t*q.c.y + t*t*q.b.y }; };
+const bezD = (q, t) => ({ x: 2*(1-t)*(q.c.x-q.a.x) + 2*t*(q.b.x-q.c.x), y: 2*(1-t)*(q.c.y-q.a.y) + 2*t*(q.b.y-q.c.y) });
+function strokeCurve(q, t0, t1) {
+  const n = 64; ctx.beginPath();
+  for (let i = 0; i <= n; i++) { const t = t0 + (t1 - t0) * i / n; const p = bez(q, t); i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
+  ctx.stroke();
+}
+function drawComets(q, col, now, i) {
+  // Two sparks drifting along each route, so the map always feels alive.
+  for (let k = 0; k < 2; k++) {
+    const head = ((now / 4200) + k / 2 + i * .17) % 1;
+    for (let j = 0; j < 9; j++) {
+      const t = head - j * .012; if (t < 0) break;
+      const p = bez(q, t);
+      ctx.globalAlpha = (1 - j / 9) * .85; ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(p.x, p.y, j ? 1.8 - j * .15 : 2.2, 0, 6.2832); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+function drawPlane(x, y, ang, col, q, t) {
+  if (q) { // contrail
+    for (let j = 1; j <= 14; j++) { const tt = t - j * .01; if (tt < 0) break; const p = bez(q, tt); ctx.globalAlpha = (1 - j / 14) * .45; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(p.x, p.y, 2.4 - j * .12, 0, 6.2832); ctx.fill(); }
+    ctx.globalAlpha = 1;
+  }
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 22); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g; ctx.globalAlpha = .55; ctx.beginPath(); ctx.arc(0, 0, 22, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.shadowColor = col; ctx.shadowBlur = 12;
+  ctx.fillStyle = '#5B3FC4'; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  const P = [[10,0],[6,-1.3],[1,-1.5],[-3,-8.5],[-5.2,-8.5],[-2.6,-1.6],[-7.5,-1.4],[-9.6,-4.2],[-11,-4.2],[-10,0]];
+  P.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py));
+  for (let i = P.length - 2; i >= 1; i--) ctx.lineTo(P[i][0], -P[i][1]);
+  ctx.closePath(); ctx.stroke(); ctx.fill();
+  ctx.restore();
+}
+
+/* ---------------- scrub model ---------------- */
+function segAtSlider(v) { for (const s of SEGS) if (v <= s.c1 && s.w) return s; return SEGS[SEGS.length - 2]; }
+function sliderToTime(v) { const s = segAtSlider(v); const f = s.c1 > s.c0 ? (v - s.c0) / (s.c1 - s.c0) : 1; return s.t0 + Math.min(1, Math.max(0, f)) * (s.t1 - s.t0); }
+function timeToSlider(t) { if (t <= TRIP_START) return 0; if (t >= LEGS[3].arr) return 1; for (const s of SEGS) if (t >= s.t0 && t <= s.t1 && s.w) return s.c0 + (t - s.t0) / (s.t1 - s.t0) * (s.c1 - s.c0); return 0; }
+function segAtTime(t) { for (const s of SEGS) if (t >= s.t0 && t < s.t1) return s; return t >= LEGS[3].arr ? SEGS[SEGS.length - 1] : SEGS[0]; }
+const legFrac = (i, t) => Math.min(1, Math.max(0, (t - LEGS[i].dep) / (LEGS[i].arr - LEGS[i].dep)));
+
+let T = TRIP_START;          // scrubbed trip time
+let intro = reduced ? 1 : 0; // 0..1 draw-in progress
+let introStart = 0;
+
+function currentCity(t) { const s = segAtTime(t); return s.kind === 'ground' ? s.city : null; }
+
+function draw(now) {
+  if (!proj) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, Hh);
+  ctx.drawImage(dotsCanvas, 0, 0, W, Hh);
+  const lw = Math.max(2, Math.min(3.2, W / 180));
+  ctx.lineCap = 'round';
+  let plane = null;
+  LEGS.forEach((leg, i) => {
+    const q = curve(leg), col = colors[leg.dir];
+    const show = intro < 1 ? Math.min(1, Math.max(0, intro * 4 - i)) : 1;
+    if (show <= 0) return;
+    ctx.globalAlpha = .28; ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash([2, 6]);
+    strokeCurve(q, 0, show);
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    const done = intro < 1 ? show : legFrac(i, T);
+    if (done > 0) {
+      ctx.strokeStyle = col; ctx.lineWidth = lw;
+      ctx.shadowColor = col; ctx.shadowBlur = 16;
+      strokeCurve(q, 0, done);
+      ctx.shadowBlur = 0;
+    }
+    if (intro >= 1 && !reduced) drawComets(q, col, now, i);
+    const flying = intro < 1 ? (show > 0 && show < 1) : (T >= leg.dep && T < leg.arr);
+    if (flying) { const tt = intro < 1 ? show : done; const p = bez(q, tt), d = bezD(q, tt); plane = { x: p.x, y: p.y, a: Math.atan2(d.y, d.x), col, q, tt }; }
+  });
+  // cities
+  const here = intro < 1 ? null : currentCity(T);
+  const pulse = reduced ? 0 : (now % 2000) / 2000;
+  const labelA = intro < 1 ? Math.max(0, intro * 3 - 1.4) : 1;
+  Object.values(CITY).forEach(c => {
+    const p = pt(c.code), active = c.code === here;
+    const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, active ? 26 : 16);
+    halo.addColorStop(0, c.code === 'HAN' ? 'rgba(232,178,26,.35)' : c.code === 'KUL' ? 'rgba(91,63,196,.18)' : 'rgba(139,108,240,.3)'); halo.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(p.x, p.y, active ? 26 : 16, 0, 6.2832); ctx.fill();
+    if (active) {
+      const col = '#8B6CF0';
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      ctx.globalAlpha = reduced ? .5 : (1 - pulse) * .7;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 6 + (reduced ? 6 : pulse * 16), 0, 6.2832); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = '#5B3FC4'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(p.x, p.y, active ? 5.5 : 4.2, 0, 6.2832); ctx.fill(); ctx.stroke();
+    if (labelA > 0) {
+      ctx.globalAlpha = Math.min(1, labelA);
+      const [dx, dy, al] = c.lbl; ctx.textAlign = al; ctx.textBaseline = 'middle';
+      ctx.font = `800 ${W < 420 ? 17 : 21}px ${colors['f-display']}`;
+      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.fillStyle = colors.ink;
+      ctx.strokeText(c.code, p.x + dx, p.y + dy - 7); ctx.fillText(c.code, p.x + dx, p.y + dy - 7);
+      ctx.font = `500 ${W < 420 ? 10 : 11}px ${colors['f-mono']}`;
+      ctx.fillStyle = colors.muted;
+      ctx.strokeText(t(c.city), p.x + dx, p.y + dy + 8); ctx.fillText(t(c.city), p.x + dx, p.y + dy + 8);
+      ctx.globalAlpha = 1;
+    }
+  });
+  if (plane) drawPlane(plane.x, plane.y, plane.a, plane.col, plane.q, plane.tt);
+}
+
+let rafId = 0;
+function loop(now) {
+  rafId = 0;
+  if (!introStart) introStart = now;
+  if (intro < 1) {
+    const raw = Math.min(1, (now - introStart - 250) / 3200);
+    intro = raw <= 0 ? 0 : raw < .5 ? 4 * raw ** 3 : 1 - (-2 * raw + 2) ** 3 / 2;
+    if (raw >= 1) intro = 1;
+  }
+  if (playing) stepPlay(now);
+  if (canvas.offsetParent !== null) draw(now);
+  const visible = canvas.offsetParent !== null && !document.hidden;
+  const animating = playing || (visible && (intro < 1 || !reduced));
+  if (animating) rafId = requestAnimationFrame(loop);
+}
+const kick = () => { if (!rafId) rafId = requestAnimationFrame(loop); };
+
+/* ---------------- readout ---------------- */
+const scrub = $('#scrub');
+function nightFor(t) {
+  const p = parts(t, 'Asia/Shanghai'); let d = +p.day; if (+p.hour < 12) d -= 1;
+  return { n: NIGHTS.find(n => n.d === d), tonight: +p.hour >= 12 };
+}
+function updateReadout() {
+  const s = segAtTime(T);
+  let phase = '', title = '', sub = '', tz, off;
+  if (s.kind === 'air') {
+    const Lg = LEGS[s.leg], A = CITY[Lg.from], B = CITY[Lg.to];
+    const f = legFrac(s.leg, T);
+    tz = f < .5 ? A.tz : B.tz; off = f < .5 ? A.off : B.off;
+    phase = `<span class="chip ${Lg.dir}">${Lg.no}</span><span class="chip">${t('In the air · {p}%', { p: Math.round(f * 100) })}</span>`;
+    title = `${t(A.city)} → ${t(B.city)}`;
+    sub = t('Lands {time} {city} time, in {d} · {airport} {term}', { time: hm(Lg.arr, B.tz), city: t(B.city), d: dur(Lg.arr - T), airport: t(B.airport), term: Lg.tT });
+  } else {
+    const C = CITY[s.city]; tz = C.tz; off = C.off;
+    const next = LEGS.find(l => l.dep > T);
+    if (s.stage === 'pre') {
+      phase = `<span class="chip out">${t('Departure day')}</span>`;
+      title = t('At {airport} Terminal 1', { airport: t(C.airport) });
+      sub = t('{no} to {city} leaves {time}, in {d}.', { no: next.no, city: t(CITY[next.to].city), time: hm(next.dep, C.tz), d: dur(next.dep - T) });
+    } else if (s.stage === 'transfer') {
+      const h = +parts(T, C.tz).hour, overnight = h >= 22 || h < 6;
+      phase = `<span class="chip">${t('Transfer · {d}', { d: dur(s.t1 - s.t0) })}</span>${overnight ? `<span class="chip">${t('Overnight')}</span>` : ''}<span class="chip good">${t('Bags checked through')}</span>`;
+      title = t('Transfer in {city}', { city: t(C.city) });
+      sub = t('{no} to {city} leaves {time} from {term}, in {d}.', { no: next.no, city: t(CITY[next.to].city), time: hm(next.dep, C.tz), term: next.fT, d: dur(next.dep - T) });
+    } else if (s.stage === 'stay') {
+      const dayN = +parts(T, C.tz).day - 17;
+      const { n, tonight } = nightFor(T);
+      const when = tonight ? t('Tonight') : t('Last night');
+      const b = plan.base[+parts(T, C.tz).day];
+      phase = `<span class="chip">${t('Shanghai · day {n} of 7', { n: Math.min(7, dayN) })}</span>`;
+      if (b && b !== 'sh' && CITIES[b]) phase += `<span class="chip good">${t('Day trip: {city}', { city: t(CITYN[b]) })}</span>`;
+      if (n) phase += n.kind === 'booked' ? `<span class="chip good">${t('{when}: booked', { when })}</span>` : `<span class="chip warn">${t('{when}: not booked', { when })}</span>`;
+      title = n ? (n.kind === 'booked' ? t(n.place) : t('{when}: no hotel yet', { when })) : t('In Shanghai');
+      sub = t('Flight home {no} leaves Pudong {term} {day} {time}, in {d}.', { no: next.no, term: next.fT, day: day(next.dep, C.tz), time: hm(next.dep, C.tz), d: dur(next.dep - T) });
+    } else {
+      phase = `<span class="chip ret">${t('Home')}</span>`;
+      title = t('Back in Kuala Lumpur');
+      sub = t('Landed {time} at {airport} Terminal 1.', { time: hm(LEGS[3].arr, C.tz), airport: t(C.airport) });
+    }
+  }
+  if (s.kind === 'ground') { const k = CKEY[s.city], c = CLIMATE[k]; phase += `<span class="chip">${t('Feb avg {hi}° / {lo}°C', { hi: c.hi, lo: c.lo })}</span>`; }
+  $('#roPhase').innerHTML = phase;
+  $('#roTitle').textContent = title;
+  $('#roSub').textContent = sub;
+  $('#roTime').textContent = hm(T, tz);
+  flapSet($('#flapTime'), hm(T, tz), playing);
+  flapSet($('#flapCode'), s.kind === 'air' ? LEGS[s.leg].no : s.city, playing);
+  applySky(T, tz);
+  $('#roZone').textContent = `${day(T, tz)} · ${gmt(off)}`;
+  $('#roHome').textContent = off === 8 && tz !== 'Asia/Kuala_Lumpur' ? t('Same time as KL') : off === 8 ? t('Kuala Lumpur time') : t('KL {time}', { time: hm(T, 'Asia/Kuala_Lumpur') });
+  scrub.setAttribute('aria-valuetext', `${day(T, tz)} ${hm(T, tz)}. ${title}.`);
+}
+function setT(t, fromSlider) {
+  T = Math.min(TRIP_END, Math.max(TRIP_START, t));
+  if (!fromSlider) scrub.value = Math.round(timeToSlider(T) * 1000);
+  updateReadout(); kick();
+  if (reduced || !rafId) draw(performance.now());
+}
+scrub.addEventListener('input', () => { stopPlay(); setT(sliderToTime(scrub.value / 1000), true); });
+
+// Track colouring + ticks
+(() => {
+  const bar = $('#trackBar'), ticks = $('#ticks');
+  SEGS.forEach(s => { if (s.kind !== 'air') return; const i = document.createElement('i'); i.style.left = s.c0 * 100 + '%'; i.style.width = (s.c1 - s.c0) * 100 + '%'; i.style.background = `var(--route-${LEGS[s.leg].dir})`; bar.appendChild(i); });
+  const marks = [['KUL', 0], ['SGN', SEGS[2].c0], ['PVG', SEGS[4].c0], ['HAN', SEGS[6].c0], ['KUL', 1]];
+  ticks.innerHTML = marks.map(([c, p]) => `<span style="left:${p * 100}%">${c}</span>`).join('');
+  // ticks sit under the track only: offset by play button (40px) + gap, and the Now button on the right
+  const syncTicks = () => { const tr = $('.track').getBoundingClientRect(), row = $('.scrub-row').getBoundingClientRect(); ticks.style.marginLeft = (tr.left - row.left) + 'px'; ticks.style.marginRight = (row.right - tr.right) + 'px'; };
+  addEventListener('resize', syncTicks); requestAnimationFrame(syncTicks);
+})();
+
+/* play */
+let playing = false, playLast = 0;
+const PLAY_MS = 14000;
+function stepPlay(now) {
+  if (!playLast) { playLast = now; return; }
+  const dt = now - playLast; playLast = now;
+  let v = scrub.value / 1000 + dt / PLAY_MS;
+  if (v >= 1) { v = 1; stopPlay(); }
+  scrub.value = Math.round(v * 1000);
+  T = sliderToTime(v); updateReadout();
+}
+function startPlay() {
+  if (+scrub.value >= 1000) { scrub.value = 0; setT(TRIP_START); }
+  if (reduced) { setT(TRIP_END); return; }
+  playing = true; playLast = 0; intro = 1; $('#sky').classList.add('live');
+  $('#playBtn').setAttribute('aria-label', 'Pause');
+  $('#playIcon').innerHTML = '<rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/>';
+  kick();
+}
+function stopPlay() {
+  if (!playing) return;
+  playing = false; $('#sky').classList.remove('live');
+  $('#playBtn').setAttribute('aria-label', 'Play the whole trip');
+  $('#playIcon').innerHTML = '<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/>';
+}
+$('#playBtn').addEventListener('click', () => playing ? stopPlay() : startPlay());
+$('#nowBtn').addEventListener('click', () => { stopPlay(); setT(Date.now()); });
+
+/* ---------------- header countdown + clocks ---------------- */
+const CLOCKS = [['Kuala Lumpur', 'Asia/Kuala_Lumpur', 8, 'Home'], ['Vietnam', 'Asia/Ho_Chi_Minh', 7, '1 hour behind KL'], ['Shanghai', 'Asia/Shanghai', 8, 'Same as KL']];
+function tick() {
+  const now = Date.now();
+  $('#clocks').innerHTML = CLOCKS.map(([n, tz, off, rel]) => `<div class="clock" style="--cg:${off === 7 ? 'rgba(255,122,168,.22)' : n === 'Shanghai' ? 'rgba(255,90,90,.2)' : 'rgba(255,181,71,.2)'}"><span class="n">${t(n)}</span><span class="t">${hm(now, tz)}</span><span class="d">${gmt(off)} · ${rel}</span></div>`).join('');
+  const ct = $('#countText');
+  if (now < LEGS[0].dep) {
+    const days = Math.ceil((LEGS[0].dep - now) / D);
+    ct.innerHTML = days > 1 ? t('<b>{n}</b> days until {no}', { n: days, no: LEGS[0].no }) : t('{no} departs in <b>{d}</b>', { no: LEGS[0].no, d: dur(LEGS[0].dep - now) });
+  } else if (now < LEGS[3].arr) {
+    const next = LEGS.find(l => l.dep > now);
+    ct.innerHTML = next ? t('Next: <b>{no}</b> in {d}', { no: next.no, d: dur(next.dep - now) }) : t('On the way home');
+  } else ct.textContent = t('Trip complete · welcome home');
+}
+
+/* ---------------- journey cards ---------------- */
+function planeSvg() { return `<svg viewBox="0 0 88 18" aria-hidden="true"><line x1="2" y1="9" x2="86" y2="9" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 4"/><path fill="currentColor" d="M52 9l-6-1.2-2.7-5.3h-2l1.4 5.1-4.4.3-1.6-2.2h-1.2l.8 3.3-.8 3.3h1.2l1.6-2.2 4.4.3-1.4 5.1h2l2.7-5.3z" transform="translate(-2 0)"/></svg>`; }
+function passHtml(L) {
+  const A = CITY[L.from], B = CITY[L.to];
+  const shift = B.off - A.off;
+  const foot = shift ? t(shift < 0 ? 'Clocks go back <b>1 hour</b> when you land ({a} → {b}).' : 'Clocks go forward <b>1 hour</b> when you land ({a} → {b}).', { a: gmt(A.off), b: gmt(B.off) }) : t('No time change. {b} is on {z}, the same as {a}.', { b: t(B.city), z: gmt(B.off), a: t(A.city) });
+  return `<article class="pass ${L.dir}" aria-label="${L.no} ${t(A.city)} → ${t(B.city)}">
+    <div class="pass-top"><span class="flt">${L.no}</span><span class="meta">${t('Vietnam Airlines')} · ${L.ac} · ${t(L.svc)}</span><span class="date">${day(L.dep, A.tz)}</span></div>
+    <div class="pass-main">
+      <div class="pt"><span class="iata">${A.code}</span><span class="time">${hm(L.dep, A.tz)}</span><span class="where">${t(A.city)} · ${L.fT}</span></div>
+      <div class="mid">${planeSvg()}<span>${dur(L.arr - L.dep)}</span></div>
+      <div class="pt r"><span class="iata">${B.code}</span><span class="time">${hm(L.arr, B.tz)}</span><span class="where">${t(B.city)} · ${L.tT}</span></div>
+    </div>
+    <div class="pass-foot"><span>${foot}</span><span class="barcode" style="--bc:${barcode(L.no + L.from + L.to)}" aria-hidden="true"></span></div>
+  </article>`;
+}
+function hopHtml(title, chips, body) { return `<div class="hop"><div class="hop-title">${title}${chips}</div><p>${body}</p></div>`; }
+function renderJourney() {
+  const back = (L) => hm(L.dep - 150 * M, CITY[L.from].tz);
+  $('#journey').innerHTML = `
+    <div class="sec-head"><h2>Your flights</h2><p>All times are local to each airport.</p></div>
+    <div class="dir-label"><span class="chip out">Outbound</span><span class="line"></span><span class="eyebrow">17–18 Feb</span></div>
+    ${passHtml(LEGS[0])}
+    ${hopHtml(t('<span class="mono">{d}</span> in Ho Chi Minh City', { d: dur(LEGS[1].dep - LEGS[0].arr) }), ` <span class="chip">${t('Overnight')}</span> <span class="chip good">${t('Bags checked through')}</span>`,
+      t('Land <b>21:00</b>, fly <b>09:20</b>. Tan Son Nhat sits close to the city centre. Leaving the airport means going through Vietnamese immigration and security again, so be back at the terminal by <b>{time}</b>.', { time: back(LEGS[1]) }))}
+    ${passHtml(LEGS[1])}
+    ${hopHtml(t('<span class="mono">6</span> nights in Shanghai'), ` <span class="chip warn">${t('4 nights not booked')}</span>`, t('Pudong T1 into the city by Maglev and Metro Line 2, or by DiDi. The Mido Homestay covers 22–24 Feb.'))}
+    <div class="dir-label"><span class="chip ret">Return</span><span class="line"></span><span class="eyebrow">24–25 Feb</span></div>
+    ${passHtml(LEGS[2])}
+    ${hopHtml(t('<span class="mono">{d}</span> in Hanoi', { d: dur(LEGS[3].dep - LEGS[2].arr) }), ` <span class="chip">${t('Overnight')}</span> <span class="chip good">${t('Bags checked through')}</span>`,
+      t('Land <b>18:05</b>, fly <b>14:50</b> next day. Noi Bai is about 30 km from the Old Quarter, roughly 45–60 minutes by car. If you go into town, be back by <b>{time}</b>.', { time: back(LEGS[3]) }))}
+    ${passHtml(LEGS[3])}`;
+  $('#nights').innerHTML = NIGHTS.map(n => {
+    const ts = at(2027, 2, n.d, 12, 0, 8);
+    return `<div class="night ${n.kind}" title="${esc(t(n.place) + ' · ' + t(n.note))}"><span class="dw">${F('Asia/Shanghai', { weekday:'short' }).format(ts)}</span><span class="dd">${n.d}</span><span class="st" aria-hidden="true"></span><span class="pl">${esc(t(n.short))}</span><span class="sr">${esc(t(n.note))}</span></div>`;
+  }).join('');
+}
+
+/* ---------------- Show & Say ---------------- */
+const PHRASES = {
+  zh: { name:'Mandarin', speech:'zh-CN', groups: [
+    ['Getting around', [
+      ['Please take me to this address.', '请带我去这个地址。', 'Qǐng dài wǒ qù zhège dìzhǐ.'],
+      ['Pudong Airport, Terminal 1, departures, please.', '请送我去浦东国际机场1号航站楼，出发层。', 'Qǐng sòng wǒ qù Pǔdōng guójì jīchǎng yī hào hángzhànlóu, chūfā céng.'],
+      ['Please use the meter.', '请打表。', 'Qǐng dǎ biǎo.'],
+      ['Please stop here.', '请在这里停车。', 'Qǐng zài zhèlǐ tíngchē.'],
+      ['Where is the metro station?', '地铁站在哪里？', 'Dìtiě zhàn zài nǎlǐ?']
+    ]],
+    ['Eating and shopping', [
+      ['How much is this?', '这个多少钱？', 'Zhège duōshao qián?'],
+      ['Too expensive. Can it be cheaper?', '太贵了，可以便宜一点吗？', 'Tài guì le, kěyǐ piányi yìdiǎn ma?'],
+      ['Not spicy, please.', '请不要辣。', 'Qǐng bú yào là.'],
+      ['Can I pay with Alipay?', '可以用支付宝吗？', 'Kěyǐ yòng Zhīfùbǎo ma?'],
+      ['The bill, please.', '买单。', 'Mǎidān.'],
+      ['I don’t eat pork.', '我不吃猪肉。', 'Wǒ bù chī zhūròu.'],
+      ['Is there halal food?', '有清真的吗？', 'Yǒu qīngzhēn de ma?']
+    ]],
+    ['Basics', [
+      ['I don’t speak Chinese.', '我不会说中文。', 'Wǒ bú huì shuō Zhōngwén.'],
+      ['Please write it down.', '请写下来。', 'Qǐng xiě xiàlái.'],
+      ['Where is the toilet?', '洗手间在哪里？', 'Xǐshǒujiān zài nǎlǐ?'],
+      ['Thank you.', '谢谢。', 'Xièxie.']
+    ]],
+    ['Help', [
+      ['Please help me call the police.', '请帮我报警。', 'Qǐng bāng wǒ bàojǐng.'],
+      ['I need a doctor.', '我需要看医生。', 'Wǒ xūyào kàn yīshēng.'],
+      ['I lost my passport.', '我的护照丢了。', 'Wǒ de hùzhào diū le.']
+    ]]
+  ], sos: [['110', 'Police'], ['120', 'Ambulance'], ['119', 'Fire']], lead:'请带我去这个地址：', addrLabel:'Shanghai hotel address in Chinese', addrHint:'Copy the Chinese address from your booking confirmation or the hotel’s page and paste it here.' },
+  vi: { name:'Vietnamese', speech:'vi-VN', groups: [
+    ['Getting around', [
+      ['Please take me to this address.', 'Làm ơn đưa tôi đến địa chỉ này.', ''],
+      ['Tan Son Nhat Airport, international terminal, please.', 'Làm ơn đưa tôi đến sân bay Tân Sơn Nhất, ga quốc tế.', ''],
+      ['Noi Bai Airport, Terminal 2 (international), please.', 'Làm ơn đưa tôi đến sân bay Nội Bài, nhà ga T2, ga quốc tế.', ''],
+      ['Please stop here.', 'Làm ơn dừng ở đây.', '']
+    ]],
+    ['Eating and shopping', [
+      ['How much is this?', 'Cái này bao nhiêu tiền?', ''],
+      ['Too expensive.', 'Đắt quá.', ''],
+      ['Not spicy, please.', 'Không cay nhé.', ''],
+      ['The bill, please.', 'Tính tiền.', ''],
+      ['I don’t eat pork.', 'Tôi không ăn thịt heo (thịt lợn).', '']
+    ]],
+    ['Basics', [
+      ['I don’t speak Vietnamese.', 'Tôi không nói được tiếng Việt.', ''],
+      ['Where is the toilet?', 'Nhà vệ sinh ở đâu?', ''],
+      ['Thank you.', 'Cảm ơn.', '']
+    ]],
+    ['Help', [
+      ['Please call the police for me.', 'Làm ơn gọi công an giúp tôi.', ''],
+      ['I need a doctor.', 'Tôi cần gặp bác sĩ.', ''],
+      ['I lost my passport.', 'Tôi bị mất hộ chiếu.', '']
+    ]]
+  ], sos: [['113', 'Police'], ['115', 'Ambulance'], ['114', 'Fire']], lead:'Làm ơn đưa tôi đến địa chỉ này: ', addrLabel:'Vietnam hotel address (if you leave the airport)', addrHint:'Paste the address exactly as it appears on your booking, with the Vietnamese accents.' }
+};
+let lang = 'zh';
+const addr = store.get('addr', { zh: { name: 'Shanghai Mido Resort Homestay', text: '' }, vi: { name: '', text: '' } });
+
+function renderAddr() {
+  const P = PHRASES[lang], a = addr[lang];
+  $('#addrBox').innerHTML = `
+    <div class="sec-head"><h2 style="font-size:16px">Take me to my hotel</h2></div>
+    <div class="addr-grid">
+      <div class="field"><label for="addrName">Hotel name</label><input id="addrName" value="${esc(a.name)}" placeholder="${lang === 'zh' ? 'e.g. the hotel you book for 18–22 Feb' : 'e.g. a room near the airport'}"></div>
+      <div class="field"><label for="addrText">${P.addrLabel}</label><textarea id="addrText" placeholder="${lang === 'zh' ? '上海市…' : 'Số …, Đường …'}">${esc(a.text)}</textarea><span class="hint">${P.addrHint}</span></div>
+    </div>
+    <div><button class="btn" id="addrShow" type="button"${a.text.trim() ? '' : ' disabled'}>Show to driver</button></div>`;
+  const upd = () => { addr[lang] = { name: $('#addrName').value, text: $('#addrText').value }; store.set('addr', addr); $('#addrShow').disabled = !addr[lang].text.trim(); };
+  $('#addrName').addEventListener('input', upd); $('#addrText').addEventListener('input', upd);
+  $('#addrShow').addEventListener('click', () => { const x = addr[lang]; openShow(P.lead + x.text.trim(), x.name ? x.name : '', 'Please take me to this address.'); });
+}
+function renderPhrases() {
+  const P = PHRASES[lang];
+  $('#phraseGroups').innerHTML = P.groups.map(([g, list], gi) => `<div class="group"><h3>${g}</h3><div class="cards">${list.map(([en, lo, ro], i) =>
+    `<button class="phrase" type="button" data-g="${gi}" data-i="${i}"><span class="en">${esc(en)}</span><span class="lo" lang="${lang === 'zh' ? 'zh-CN' : 'vi'}">${esc(lo)}</span>${ro ? `<span class="ro">${esc(ro)}</span>` : ''}</button>`).join('')}</div></div>`).join('');
+  $('#sos').innerHTML = P.sos.map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
+}
+$('#phraseGroups').addEventListener('click', e => {
+  const b = e.target.closest('.phrase'); if (!b) return;
+  const [en, lo, ro] = PHRASES[lang].groups[b.dataset.g][1][b.dataset.i];
+  openShow(lo, ro, en);
+});
+$$('#sayLang button').forEach(b => b.addEventListener('click', () => {
+  lang = b.dataset.lang; $$('#sayLang button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderAddr(); renderPhrases();
+}));
+
+/* overlay */
+const show = $('#show');
+let lastFocus = null, wake = null, showing = null;
+async function openShow(text, ro, en, lng = lang) {
+  showing = { text, lang: lng };
+  lastFocus = document.activeElement;
+  const st = $('#showText'); st.textContent = text; st.lang = lng === 'zh' ? 'zh-CN' : 'vi';
+  st.classList.toggle('long', text.length > (lng === 'zh' ? 16 : 40));
+  $('#showRo').textContent = ro || ''; $('#showRo').hidden = !ro;
+  $('#showEn').textContent = en; $('#showLang').textContent = PHRASES[lng].name;
+  $('#showMsg').textContent = '';
+  show.hidden = false; document.body.style.overflow = 'hidden';
+  $('#showClose').focus();
+  try { wake = await navigator.wakeLock?.request('screen'); } catch { wake = null; }
+}
+function closeShow() {
+  show.hidden = true; document.body.style.overflow = '';
+  try { speechSynthesis?.cancel(); } catch {}
+  try { wake?.release(); } catch {} wake = null;
+  lastFocus?.focus?.();
+}
+$('#showClose').addEventListener('click', closeShow);
+show.addEventListener('click', e => { if (e.target === show) closeShow(); });
+show.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); closeShow(); }
+  if (e.key === 'Tab') { const f = $$('button', show).filter(b => !b.disabled); const i = f.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
+});
+function findVoice(code) {
+  const vs = speechSynthesis.getVoices(), lc = code.toLowerCase(), base = lc.slice(0, 2);
+  return vs.find(v => v.lang.replace('_','-').toLowerCase() === lc) || vs.find(v => v.lang.toLowerCase().startsWith(base)) || null;
+}
+$('#showSpeak').addEventListener('click', () => {
+  const msg = $('#showMsg'), P = PHRASES[showing.lang];
+  if (!('speechSynthesis' in window)) { msg.textContent = 'This browser can’t read text aloud. Show the screen instead.'; return; }
+  const v = findVoice(P.speech);
+  if (!v && speechSynthesis.getVoices().length) { msg.textContent = `This device has no ${P.name} voice installed. Show the screen instead, or add the voice in your phone’s speech settings.`; return; }
+  const u = new SpeechSynthesisUtterance(showing.text); u.lang = P.speech; if (v) u.voice = v; u.rate = .85;
+  u.onerror = () => { msg.textContent = 'Reading aloud failed. Show the screen instead.'; };
+  speechSynthesis.cancel(); speechSynthesis.speak(u); msg.textContent = '';
+});
+$('#showCopy').addEventListener('click', async () => {
+  const msg = $('#showMsg');
+  try { await navigator.clipboard.writeText(showing.text); msg.textContent = 'Copied.'; }
+  catch { const r = document.createRange(); r.selectNodeContents($('#showText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); msg.textContent = 'Text selected. Copy it from your browser menu.'; }
+});
+try { speechSynthesis.getVoices(); speechSynthesis.addEventListener?.('voiceschanged', () => {}); } catch {}
+
+/* ---------------- Money ---------------- */
+const RATE_DEFAULT = { VND: 6365, CNY: 1.6486, when: '26 Sep 2026', src: 'default' };
+const rates = store.get('rates', RATE_DEFAULT);
+let cur = 'VND', toMYR = true;
+const NOTES = {
+  VND: [[10000,'#9b6b3d'],[20000,'#3b6fb6'],[50000,'#c2577f'],[100000,'#4d8a3a'],[200000,'#b0473a'],[500000,'#2f8fa6']],
+  CNY: [[1,'#7a8a45'],[5,'#7a4d99'],[10,'#3a5aa8'],[20,'#8a5a3a'],[50,'#2f7a5a'],[100,'#c0392b']]
+};
+const nf0 = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const nf2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function parseAmt(raw) {
+  let s = raw.trim().toLowerCase().replace(/\s+/g, '').replace(/^(rm|₫|¥|vnd|cny|rmb|myr)/, '').replace(/(₫|đ|vnd|¥|元|cny|rmb|rm|myr)$/, '');
+  if (!s) return null;
+  let mult = 1;
+  const m = s.match(/(k|nghìn|nghin|m|mil|tr|triệu|trieu)$/);
+  if (m) { mult = /^(k|ngh)/.test(m[1]) ? 1e3 : 1e6; s = s.slice(0, -m[1].length); }
+  if (/^\d{1,3}([.,]\d{3})+$/.test(s)) s = s.replace(/[.,]/g, '');
+  else s = s.replace(',', '.');
+  if (!/^\d*\.?\d+$/.test(s)) return NaN;
+  return parseFloat(s) * mult;
+}
+function zeroFmt(n, dec) {
+  const str = dec ? nf2.format(n) : nf0.format(Math.round(n));
+  if (dec) return esc(str);
+  const g = str.split(','); let i = g.length;
+  while (i > 1 && g[i - 1] === '000') i--;
+  return esc(g.slice(0, i).join(',')) + (i < g.length ? `<span class="z">,${g.slice(i).join(',')}</span>` : '');
+}
+function words(n) {
+  if (LANG === 'zh') { if (n >= 1e8) return `${+(n / 1e8).toFixed(2)}亿越南盾`; if (n >= 1e4) return `${+(n / 1e4).toFixed(1)}万越南盾`; return ''; }
+  if (n >= 1e6) return `${+(n / 1e6).toFixed(2)} million dong`;
+  if (n >= 1e3) return `${+(n / 1e3).toFixed(1)} thousand dong`;
+  return '';
+}
+function renderConv() {
+  const out = $('#convOut'), v = parseAmt($('#amtIn').value), r = +rates[cur];
+  $('#amtCur').textContent = toMYR ? cur : 'MYR';
+  store.set('money', { cur, toMYR, input: $('#amtIn').value });
+  if (v === null) { out.innerHTML = `<p class="conv-err">${t('Type an amount, like {ex}.', { ex: toMYR ? (cur === 'VND' ? '350k' : '68') : '50' })}</p>`; return; }
+  if (Number.isNaN(v)) { out.innerHTML = `<p class="conv-err">That doesn’t look like a price. Try 350k, 1.5tr, 350.000 or 42.50.</p>`; return; }
+  if (!(r > 0)) { out.innerHTML = `<p class="conv-err">${t('Set the {cur} exchange rate below first.', { cur })}</p>`; return; }
+  if (toMYR) {
+    const myr = v / r;
+    out.innerHTML = `<div class="amt-src">${zeroFmt(v, cur === 'CNY' && v % 1 !== 0)}<span class="u">${cur}</span></div>
+      ${cur === 'VND' && words(v) ? `<div class="amt-words">${words(v)}</div>` : ''}
+      <div class="amt-dst"><small>RM</small><span class="num" data-v="${myr}" data-d="2">${nf2.format(myr)}</span></div>`;
+    countUp(out);
+  } else {
+    const f = v * r;
+    out.innerHTML = `<div class="amt-src">${nf2.format(v)}<span class="u">MYR</span></div>
+      <div class="amt-dst"><small>${cur === 'VND' ? '₫' : '¥'}</small><span class="num" data-v="${f}" data-d="${cur === 'VND' ? 0 : 2}">${cur === 'VND' ? nf0.format(Math.round(f)) : nf2.format(f)}</span></div>
+      ${cur === 'VND' && words(f) ? `<div class="amt-words">${words(f)}</div>` : ''}`;
+    countUp(out);
+  }
+}
+function renderNotes() {
+  $('#notesTitle').textContent = cur === 'VND' ? 'Vietnamese banknotes in ringgit' : 'Chinese banknotes in ringgit';
+  $('#notes').innerHTML = NOTES[cur].map(([n, c]) => `<button class="note" type="button" data-n="${n}" style="--nc:${c}"><b>${cur === 'VND' ? nf0.format(n) : '¥' + n}</b><span>RM ${nf2.format(n / rates[cur])}</span></button>`).join('');
+  $('#noteWarn span').textContent = cur === 'VND'
+    ? 'The 20,000 and 500,000 dong notes are both blue and easy to mix up. Count the zeros before you hand one over.'
+    : 'Most places in Shanghai expect Alipay or WeChat Pay. Keep some cash for small shops and as a backup.';
+}
+function setCur(c) { cur = c; $$('#panel-money .seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.cur === c)); renderNotes(); renderConv(); }
+$$('#panel-money .seg button').forEach(b => b.addEventListener('click', () => setCur(b.dataset.cur)));
+$('#amtIn').addEventListener('input', renderConv);
+$('#swapBtn').addEventListener('click', () => {
+  const v = parseAmt($('#amtIn').value), r = +rates[cur];
+  if (v && r > 0) $('#amtIn').value = toMYR ? (v / r).toFixed(2) : (cur === 'VND' ? String(Math.round(v * r)) : (v * r).toFixed(2));
+  toMYR = !toMYR; renderConv();
+});
+$('#notes').addEventListener('click', e => { const b = e.target.closest('.note'); if (!b) return; toMYR = true; $('#amtIn').value = b.dataset.n; renderConv(); $('#amtIn').focus(); });
+function renderRates() {
+  $('#rVND').value = rates.VND; $('#rCNY').value = rates.CNY;
+  const st = $('#rateStatus'); st.className = 'status';
+  st.textContent = rates.src === 'live' ? t('Live rates from {when}. Saved for offline use.', { when: rates.when }) : rates.src === 'manual' ? t('Using your own rates.') : t('Rates from {when}. Update them before you fly.', { when: rates.when });
+}
+['VND', 'CNY'].forEach(c => $('#r' + c).addEventListener('input', e => {
+  const v = parseFloat(e.target.value.replace(',', '.'));
+  const st = $('#rateStatus');
+  if (v > 0) { rates[c] = v; rates.src = 'manual'; rates.when = ''; store.set('rates', rates); st.className = 'status'; st.textContent = t('Using your own rates.'); renderNotes(); renderConv(); }
+  else { st.className = 'status err'; st.textContent = t('Rates must be numbers above zero.'); }
+}));
+$('#rateBtn').addEventListener('click', async () => {
+  const btn = $('#rateBtn'), st = $('#rateStatus');
+  btn.disabled = true; btn.textContent = t('Updating…'); st.className = 'status'; st.textContent = t('Fetching the latest rates…');
+  try {
+    const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 8000);
+    const res = await fetch('https://open.er-api.com/v6/latest/MYR', { signal: ctl.signal }); clearTimeout(to);
+    if (!res.ok) throw new Error(res.status);
+    const j = await res.json();
+    if (j.result !== 'success' || !j.rates?.VND || !j.rates?.CNY) throw new Error('bad data');
+    rates.VND = +j.rates.VND.toFixed(1); rates.CNY = +j.rates.CNY.toFixed(4); rates.src = 'live';
+    rates.when = new Date(j.time_last_update_unix * 1000).toLocaleDateString(LOCALE(), { day:'numeric', month:'short', year:'numeric' });
+    store.set('rates', rates); renderRates(); renderNotes(); renderConv();
+    st.className = 'status ok'; st.textContent = t('Updated. Rates from {when}, saved for offline use.', { when: rates.when });
+  } catch {
+    st.className = 'status err'; st.textContent = t(navigator.onLine === false ? 'You’re offline. Your saved rates still work.' : 'Couldn’t reach the rate service. Your saved rates still work, or type new ones above.');
+  } finally { btn.disabled = false; btn.textContent = t('Update rates'); }
+});
+
+/* ---------------- Prep ---------------- */
+const PREP = [
+  { id:'book-sh', t:'Book a place in Shanghai for 18–22 Feb', d:'Four nights are still open before the Mido Homestay stay starts on the 22nd.' },
+  { id:'mido', t:'Keep or cancel Shanghai Mido Resort Homestay', d:'', deadline: MIDO_DEADLINE },
+  { id:'sgn', t:'Decide how to spend the Ho Chi Minh City overnight', d:'You land at 21:00 and fly at 09:20. Stay airside, or book a room near Tan Son Nhat.' },
+  { id:'han', t:'Decide how to spend the Hanoi overnight', d:'You land at 18:05 and fly at 14:50 the next day. That is enough time for an evening in the Old Quarter.' },
+  { id:'entry', t:'Confirm the entry rules for Vietnam and China', d:'Malaysian passport holders currently get visa-free short stays in both countries. Rules change, so check with each embassy or with Vietnam Airlines before you fly.' },
+  { id:'passport', t:'Check your passport is valid until at least 25 Aug 2027', d:'Many countries want six months left after your last travel date.' },
+  { id:'pay', t:'Set up Alipay or WeChat Pay and link your card', d:'Most shops, taxis and cafés in Shanghai expect mobile payment.' },
+  { id:'data', t:'Sort out mobile data for China', d:'Google, Gmail and WhatsApp are blocked on Chinese networks. Roaming or an international eSIM usually still reaches them.' },
+  { id:'maps', t:'Install a map that works in China', d:'Amap (高德地图), Baidu Maps or Apple Maps. Google Maps is blocked there and often out of date.' },
+  { id:'rides', t:'Install Grab for Vietnam and DiDi for Shanghai', d:'Both show the fare before you ride, so there is nothing to haggle over.' },
+  { id:'cash', t:'Carry some VND and CNY cash', d:'Useful for the layovers and for small places that don’t take foreign cards.' },
+  { id:'foreign', t:'Check each place you book can host foreign guests', d:'Some homestays and small guesthouses in China can’t register foreign passports. Ask Shanghai Mido Resort Homestay to confirm before the free-cancellation deadline.' },
+  { id:'offline', t:'Keep Everywhen on your phone', d:'Save this file and open it once before you fly. It works with no internet and no Google services.' }
+];
+const done = new Set(store.get('prep', []));
+function renderPrep() {
+  const now = Date.now();
+  $('#checks').innerHTML = PREP.map(p => {
+    let d = p.d, badge = '';
+    if (p.deadline) {
+      const left = p.deadline - now;
+      d = left > 0 ? t('Free cancellation ends 18:00 on 21 Feb 2027, Shanghai time ({d} from now).', { d: dur(left) }) : t('Free cancellation ended 18:00 on 21 Feb 2027, Shanghai time.');
+      badge = left > 0 ? `<span class="chip ${left < 7 * D ? 'warn' : ''}">${t('{n} days', { n: Math.floor(left / D) })}</span>` : `<span class="chip">${t('Closed')}</span>`;
+    }
+    const on = done.has(p.id);
+    return `<label class="check${on ? ' done' : ''}"><input type="checkbox" data-id="${p.id}"${on ? ' checked' : ''}><span style="display:grid;gap:2px"><span class="ct">${esc(p.t)}</span><span class="cd">${esc(d)}</span></span>${badge || '<span></span>'}</label>`;
+  }).join('');
+  const n = done.size, tot = PREP.length;
+  $('#progText').textContent = t('{n} of {tot}', { n, tot });
+  $('#progSub').textContent = n === tot ? t('All set for 17 Feb') : t('ready · {n} to go', { n: tot - n });
+  $('#ring').style.strokeDashoffset = 138.2 * (1 - n / tot);
+}
+$('#checks').addEventListener('change', e => {
+  const id = e.target.dataset.id; if (!id) return;
+  e.target.checked ? done.add(id) : done.delete(id);
+  store.set('prep', [...done]);
+  e.target.closest('.check').classList.toggle('done', e.target.checked);
+  const n = done.size, tot = PREP.length;
+  $('#progText').textContent = t('{n} of {tot}', { n, tot });
+  $('#progSub').textContent = n === tot ? t('All set for 17 Feb') : t('ready · {n} to go', { n: tot - n });
+  $('#ring').style.strokeDashoffset = 138.2 * (1 - n / tot);
+  if (e.target.checked && n === tot) { confetti(); toast('Everything is ready. Have a great trip!'); }
+});
+
+/* __GUIDE_DATA__ */
+/* __GUIDE__ */
+
+/* ---------------- Weather ---------------- */
+const CLIMATE = {
+  sh: { hi:10, lo:3, code:61, sum:'Cold, damp and often grey. Light rain or drizzle falls on roughly one day in three, and the humidity makes it feel colder than the numbers.', pack:['Warm coat','Layers','Umbrella','Shoes for wet streets'], when:'Thu 18 – Wed 24 Feb' },
+  han: { hi:20, lo:15, code:51, sum:'Mild and humid, usually overcast with a fine misty drizzle (mưa phùn). Evenings feel cool.', pack:['Light jacket','Long sleeves','Small umbrella'], when:'Evening of Wed 24 – Thu 25 Feb' },
+  sgn: { hi:33, lo:22, code:1, sum:'Dry season: hot and sunny with very little rain. Nights stay warm.', pack:['Light clothes','Sunscreen','Water bottle'], when:'Night of Wed 17 Feb' },
+  sz: { hi:9, lo:2, code:61, sum:'Cold and damp, much like Shanghai. Gardens look lovely in soft winter light, but you will want warm layers.', pack:['Warm coat','Layers','Umbrella'], when:'Day trip from Shanghai' },
+  hz: { hi:11, lo:4, code:61, sum:'Cool and often misty over West Lake, with some rain. The hills are a few degrees colder than the lakeside.', pack:['Warm coat','Comfortable walking shoes','Umbrella'], when:'Day trip from Shanghai' },
+  kul: { hi:32, lo:23, code:80, sum:'Hot and humid, with a chance of afternoon thunderstorms.', pack:['Light clothes','Umbrella'], when:'17 and 25 Feb' }
+};
+const WX_PTS = [['sh',31.23,121.47],['sz',31.30,120.62],['hz',30.27,120.16],['han',21.03,105.85],['sgn',10.78,106.70],['kul',3.14,101.69]];
+let wx = store.get('wx', null), wxState = wx ? 'stale' : 'idle', wCity = 'sh';
+function wKind(c) { if (c <= 1) return 'sun'; if (c <= 3) return 'cloud'; if (c === 45 || c === 48) return 'fog'; if ((c >= 71 && c <= 77) || c === 85 || c === 86) return 'snow'; if (c >= 95) return 'storm'; if (c >= 51) return 'rain'; return 'cloud'; }
+const W_LABEL = { sun:'Clear', cloud:'Cloudy', fog:'Fog', rain:'Rain or drizzle', snow:'Snow', storm:'Thunderstorms' };
+function wIcon(c, cls = '') {
+  const k = wKind(c), top = '<path d="M7 15h10a4 4 0 0 0 .4-7.98A5.5 5.5 0 0 0 7 7.6 3.7 3.7 0 0 0 7 15z"/>';
+  const body = { sun:'<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/>',
+    cloud:'<path d="M7 18h10a4 4 0 0 0 .4-7.98A5.5 5.5 0 0 0 7 10.6 3.7 3.7 0 0 0 7 18z"/>', fog:'<path d="M4 9h16M4 13h16M6 17h12"/>',
+    rain: top + '<path d="M9 18l-1 2.5M13 18l-1 2.5M17 18l-1 2.5"/>',
+    snow: top + '<path d="M9 19v.01M12 20v.01M15 19v.01"/>',
+    storm: top + '<path d="M12.5 15l-2 3.5h3l-2 3"/>' }[k];
+  return `<svg${cls ? ` class="${cls}"` : ''} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+}
+function dayWx(k, d) {
+  const f = wx?.data?.[k]?.days?.find(x => x.date === `2027-02-${String(d).padStart(2, '0')}`);
+  if (f) return { hi: Math.round(f.hi), lo: Math.round(f.lo), code: f.code, p: f.p ?? 0, live: true, label: t('Forecast: {w}, rain chance {p}%', { w: t(W_LABEL[wKind(f.code)]), p: f.p ?? '–' }) };
+  const c = CLIMATE[k]; return { hi: c.hi, lo: c.lo, code: c.code, live: false, label: t('Typical February in {city}', { city: t(CITYN[k]) }) };
+}
+async function loadWeather(force) {
+  if (wxState === 'loading' || (!force && wxState === 'live')) return;
+  wxState = 'loading'; renderWeather();
+  try {
+    const q = 'latitude=' + WX_PTS.map(p => p[1]).join(',') + '&longitude=' + WX_PTS.map(p => p[2]).join(',');
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 9000);
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${q}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&timezone=auto&forecast_days=16`, { signal: ctl.signal });
+    clearTimeout(to);
+    if (!res.ok) throw new Error(res.status);
+    const arr = await res.json();
+    if (!Array.isArray(arr) || arr.length !== WX_PTS.length) throw new Error('bad data');
+    const data = {};
+    arr.forEach((r, i) => { const k = WX_PTS[i][0], dl = r.daily;
+      data[k] = { cur: { t: r.current.temperature_2m, code: r.current.weather_code, time: r.current.time },
+        days: dl.time.map((date, j) => ({ date, hi: dl.temperature_2m_max[j], lo: dl.temperature_2m_min[j], p: dl.precipitation_probability_max[j], code: dl.weather_code[j] })) }; });
+    wx = { at: Date.now(), data }; store.set('wx', wx); wxState = 'live';
+  } catch { wxState = wx ? 'stale' : 'error'; }
+  renderWeather(); renderDays();
+}
+function renderWeather() {
+  const c = CLIMATE[wCity];
+  setScene(c.code);
+  $('#wxHero').innerHTML = `<div class="wx-top"><div style="display:grid;gap:6px"><span class="eyebrow">${t('Typical February in {city}', { city: t(CITYN[wCity]) })}</span>
+      <div class="wx-temp">${c.hi}°<small> / ${c.lo}°C</small></div></div>
+      <span class="wchip" style="font-size:13px">${wIcon(c.code)}${W_LABEL[wKind(c.code)]}</span></div>
+    <p class="wx-desc">${esc(c.sum)}</p>
+    <div style="display:grid;gap:6px"><span class="eyebrow">${t('You’re here: {when}', { when: t(c.when) })}</span><div class="pack">${c.pack.map(p => `<span class="chip">${esc(p)}</span>`).join('')}</div></div>
+    <p class="hint">Long-term averages, rounded. The live forecast below covers your dates once they are within 16 days.</p>`;
+  const L = $('#wxLive');
+  const head = (msg, cls = '') => `<div class="sec-head"><h2 style="font-size:16px">${t('Live forecast')}</h2><button class="sbtn" type="button" id="wxRefresh"${wxState === 'loading' ? ' disabled' : ''}>${wxState === 'loading' ? t('Loading…') : t('Refresh')}</button></div>${msg ? `<p class="status ${cls}" aria-live="polite">${msg}</p>` : ''}`;
+  if (!wx && (wxState === 'idle' || wxState === 'loading')) { L.innerHTML = head(t('Loading the live forecast…')); bindRefresh(); return; }
+  if (!wx) { L.innerHTML = head(t('The live forecast couldn’t load. You may be offline, or this page may be blocking the weather service. The typical February weather above still applies.'), 'err'); bindRefresh(); return; }
+  const D0 = wx.data[wCity];
+  const tripSet = new Set(DAYS.filter(x => x.cities.includes(wCity)).map(x => `2027-02-${String(x.d).padStart(2, '0')}`));
+  if (wCity === 'kul') ['2027-02-17','2027-02-25'].forEach(d => tripSet.add(d));
+  const hasTrip = D0.days.some(x => tripSet.has(x.date));
+  const updated = new Date(wx.at).toLocaleString(LOCALE(), { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+  const msg = wxState === 'stale' ? t('Showing the forecast saved on {u}. Tap Refresh to update it.', { u: updated }) : wxState === 'loading' ? t('Updating…') : t('Updated {u}.', { u: updated }) + ' ' + t(hasTrip ? 'Days in your trip are highlighted.' : 'Your trip days appear here once they are within 16 days, from early February 2027.');
+  const max = Math.max(...D0.days.map(x => x.hi)), min = Math.min(...D0.days.map(x => x.lo)), span = Math.max(1, max - min);
+  L.innerHTML = head(msg) + `
+    <div class="now">${wIcon(D0.cur.code)}<b>${Math.round(D0.cur.t)}°C</b><span class="hint">${t('Now in {city} · {w} · {time} local', { city: t(CITYN[wCity]), w: t(W_LABEL[wKind(D0.cur.code)]), time: esc(D0.cur.time.slice(11)) })}</span></div>
+    <div class="fc-scroll"><div class="fc-row" role="list">${D0.days.map(x => {
+      const dt = new Date(x.date + 'T12:00:00Z'), dw = dt.toLocaleDateString(LOCALE(), { weekday:'short', timeZone:'UTC' }), dd = `${dt.getUTCDate()}/${dt.getUTCMonth() + 1}`;
+      const top = (max - x.hi) / span * 100, h = Math.max(4, (x.hi - x.lo) / span * 100);
+      const lab = t('{dw} {dd}: high {hi}°, low {lo}°C, {w}, rain chance {p}%', { dw, dd, hi: Math.round(x.hi), lo: Math.round(x.lo), w: t(W_LABEL[wKind(x.code)]), p: x.p ?? '–' });
+      return `<div class="fd${tripSet.has(x.date) ? ' trip' : ''}" role="listitem" title="${lab}" aria-label="${lab}"><span class="dw">${dw}</span><span class="dd">${dd}</span>${wIcon(x.code, 'wi')}<span class="hi">${Math.round(x.hi)}°</span><span class="rng"><i style="top:${top}%;height:${h}%"></i></span><span class="lo">${Math.round(x.lo)}°</span><span class="rp">${x.p ?? '–'}%</span></div>`;
+    }).join('')}</div></div>
+    <p class="hint">Each bar runs from the day’s low to its high, all on the same scale. The percentage is the chance of rain.</p>`;
+  bindRefresh();
+}
+function bindRefresh() { $('#wxRefresh')?.addEventListener('click', () => loadWeather(true)); }
+bindSeg('#wCity', v => { wCity = v; renderWeather(); });
+
+/* __ENGINE__ */
+/* __PLACES__ */
+/* __EVALUATE__ */
+/* __TRANSLATE__ */
+
+/* ---------------- tabs ---------------- */
+const TABS = ['trip','plan','explore','weather','say','money'];
+const app = $('#app'), tabs = $$('.tab');
+function selectTab(name, focus) {
+  tabs.forEach(t => { const on = t.dataset.tab === name; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; if (on && focus) t.focus(); });
+  $$('.panel').forEach(p => p.hidden = p.id !== 'panel-' + name);
+  app.dataset.tab = name;
+  store.set('tab', name);
+  moveInd();
+  const panel = $('#panel-' + name);
+  if (!reduced) { [...panel.children].forEach((c, i) => c.style.setProperty('--i', i)); panel.classList.remove('enter'); void panel.offsetWidth; panel.classList.add('enter'); }
+  if (name === 'weather') startScene(); else stopScene();
+  if (name === 'weather' || name === 'plan') loadWeather();
+  if (name === 'explore') renderExplore();
+  if (name === 'plan') renderDays();
+  if (name === 'trip' || innerWidth >= 1024) requestAnimationFrame(() => { if (fit()) { draw(performance.now()); kick(); } });
+  if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
+}
+tabs.forEach((t, i) => {
+  t.addEventListener('click', () => selectTab(t.dataset.tab));
+  t.addEventListener('keydown', e => {
+    const k = e.key; let j = null;
+    if (k === 'ArrowRight') j = (i + 1) % tabs.length; else if (k === 'ArrowLeft') j = (i - 1 + tabs.length) % tabs.length; else if (k === 'Home') j = 0; else if (k === 'End') j = tabs.length - 1;
+    if (j !== null) { e.preventDefault(); selectTab(tabs[j].dataset.tab, true); }
+  });
+});
+
+/* ---------------- theme + resize ---------------- */
+const refreshTheme = () => { readColors(); if (proj) { buildDots(); draw(performance.now()); } };
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', refreshTheme);
+new MutationObserver(refreshTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+let rsz = 0;
+new ResizeObserver(() => { cancelAnimationFrame(rsz); rsz = requestAnimationFrame(() => { if (fit()) draw(performance.now()); }); }).observe(canvas);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); kick(); } });
+
+/* ---------------- boot ---------------- */
+readColors(); paintStars();
+renderJourney(); renderAddr(); renderPhrases(); renderBuilder(); renderDays(); renderExplore(); renderWeather();
+function rerenderAll() { tick(); renderJourney(); renderAddr(); renderPhrases(); renderBuilder(); renderDays(); renderExplore(); renderWeather(); renderPrep(); renderNotes(); renderConv(); renderRates(); trRender(trLast && trLast.text ? trLast : { kind:'empty' }); if ($('#ckOut').innerHTML) $('#ckOut').innerHTML = ''; updateReadout(); if (proj) draw(performance.now()); moveInd(); }
+$('#langBtn').addEventListener('click', () => setLang(LANG === 'zh' ? 'en' : 'zh'));
+const m = store.get('money', null);
+if (m) { cur = m.cur === 'CNY' ? 'CNY' : 'VND'; toMYR = m.toMYR !== false; $('#amtIn').value = m.input ?? '350k'; }
+setCur(cur); renderRates(); renderPrep();
+tick(); setInterval(tick, 15000);
+const now = Date.now();
+setT(now >= TRIP_START && now <= TRIP_END ? now : TRIP_START);
+const initial = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'trip';
+selectTab(initial);
+addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TABS.includes(h) && h !== app.dataset.tab) selectTab(h); });
+fit(); kick();
+i18nStart();
+})();
+</script>

@@ -1,0 +1,386 @@
+{
+ "bund": {
+  "src": "images/photos/bund.jpg",
+  "by": "钉钉",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:The_Bund_2.jpg"
+ },
+ "yuyuan": {
+  "src": "images/photos/yuyuan.jpg",
+  "by": "Stefan Fussan",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Shanghai_-_Yu_Garden_-_0035.jpg"
+ },
+ "wukang": {
+  "src": "images/photos/wukang.jpg",
+  "by": "This Photo was taken by Supanut Arunoprayote. Feel free to use any of my images,",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Wukang_Mansion_20251128.jpg"
+ },
+ "museum": {
+  "src": "images/photos/museum.jpg",
+  "by": "Hanjiang 2009 (寒江2009)",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Shanghai_Museum_exterior_1.jpg"
+ },
+ "zjj": {
+  "src": "images/photos/zjj.jpg",
+  "by": "Chensiyuan",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:1_zhujiajiao_2023_aerial.jpg"
+ },
+ "nanjing": {
+  "src": "images/photos/nanjing.jpg",
+  "by": "Melvin Loi",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:East_Nanjing_Road_2020_(50361842166).jpg"
+ },
+ "cruise": {
+  "src": "images/photos/cruise.jpg",
+  "by": "Jakub Hałun",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:20090426_Shanghai_5243.jpg"
+ },
+ "tzf": {
+  "src": "images/photos/tzf.jpg",
+  "by": "lienyuan lee",
+  "license": "CC BY 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Shanghai_Tianzifang_%E4%B8%8A%E6%B5%B7%E7%94%B0%E5%AD%90%E5%9D%8A_-_panoramio.jpg"
+ },
+ "xtd": {
+  "src": "images/photos/xtd.jpg",
+  "by": "ヌンヌン",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Xintiandi5.jpg"
+ },
+ "jingan": {
+  "src": "images/photos/jingan.jpg",
+  "by": "Legolas1024",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:%E9%9D%99%E5%AE%89%E5%AF%BA%C2%B7%E4%B8%8A%E6%B5%B7%E9%9D%99%E5%AE%89.jpg"
+ },
+ "qibao": {
+  "src": "images/photos/qibao.jpg",
+  "by": "Taken by Fanghong",
+  "license": "CC BY 2.5",
+  "page": "https://commons.wikimedia.org/wiki/File:Bridge_at_Nanxi_Street_over_Puhuitang_River,_Qibao.jpg"
+ },
+ "f-xlb": {
+  "src": "images/photos/f-xlb.jpg",
+  "by": "Peachyeung316",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:A_Xiaolongbao_from_The_Modern_Shanghai.jpg"
+ },
+ "f-sjb": {
+  "src": "images/photos/f-sjb.jpg",
+  "by": "Brian Harrington Spier",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Sheng_Jian_Bao_on_a_pan.jpg"
+ },
+ "f-hongshao": {
+  "src": "images/photos/f-hongshao.jpg",
+  "by": "FotoosVanRobin Photostream",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:%E7%B4%85%E7%87%92%E8%82%89_Braised_pork_in_brown_sauce.jpg"
+ },
+ "f-wonton": {
+  "src": "images/photos/f-wonton.jpg",
+  "by": "Sumit Surai",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Pork_Steamed_Wontons.jpg"
+ },
+ "f-tangyuan": {
+  "src": "images/photos/f-tangyuan.jpg",
+  "by": "cherrylet",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Pumpkin_tangyuan_(%E6%B1%A4%E5%9C%86)_with_red_bean_baste_and_black_sesame_fillings.jpg"
+ },
+ "f-lanzhou": {
+  "src": "images/photos/f-lanzhou.jpg",
+  "by": "Super koikeyuriko",
+  "license": "CC0",
+  "page": "https://commons.wikimedia.org/wiki/File:%E8%98%AD%E5%B7%9E%E7%89%9B%E8%82%89%E6%8B%89%E9%BA%BA.jpg"
+ },
+ "zzy": {
+  "src": "images/photos/zzy.jpg",
+  "by": "Zhangzhugang",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Suzhou_Zhuozheng_Yuan_2015.04.23_08-13-49.jpg"
+ },
+ "szmuseum": {
+  "src": "images/photos/szmuseum.jpg",
+  "by": "Legolas1024",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:%E8%8B%8F%E5%B7%9E%E5%8D%9A%E7%89%A9%E9%A6%86%C2%B7%E8%8B%8F%E5%B7%9E%C2%B7%E8%A5%BF%E5%8D%97%E5%90%91%E4%B8%9C%E5%8C%97.jpg"
+ },
+ "lingering": {
+  "src": "images/photos/lingering.jpg",
+  "by": "钉钉",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Lingering_Garden.jpg"
+ },
+ "shantang": {
+  "src": "images/photos/shantang.jpg",
+  "by": "Chensiyuan",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:1_shantang_street_canal_2023.jpg"
+ },
+ "f-biluochun": {
+  "src": "images/photos/f-biluochun.jpg",
+  "by": "Qirille",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Suzhou_Biluochun_%E8%8B%8F%E5%B7%9E%E7%A2%A7%E8%9E%BA%E6%98%A5.jpg"
+ },
+ "westlake": {
+  "src": "images/photos/westlake.jpg",
+  "by": "Takashishin",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:West_Lake,_Hangzhou_2025.jpg"
+ },
+ "lingyin": {
+  "src": "images/photos/lingyin.jpg",
+  "by": "Tyg728",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Lingyin_Temple,_Hangzhou_20161003.jpg"
+ },
+ "longjing": {
+  "src": "images/photos/longjing.jpg",
+  "by": "Difference engine",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Longjing_tea.jpg"
+ },
+ "leifeng": {
+  "src": "images/photos/leifeng.jpg",
+  "by": "David290",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Leifeng_Pagoda_DJI_0593_(2).jpg"
+ },
+ "f-dongpo": {
+  "src": "images/photos/f-dongpo.jpg",
+  "by": "Archon6812",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:BCfood12.JPG"
+ },
+ "hoankiem": {
+  "src": "images/photos/hoankiem.jpg",
+  "by": "Cyril Doussin from London, United Kingdom",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Thap_Rua.jpg"
+ },
+ "temple": {
+  "src": "images/photos/temple.jpg",
+  "by": "The original uploader was Chuoibk at English Wikipedia.",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Hanoi_Temple_of_Literature_(cropped).jpg"
+ },
+ "f-phobo": {
+  "src": "images/photos/f-phobo.jpg",
+  "by": "SerraKnightz",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Bowl_of_Meatball_pho.jpg"
+ },
+ "f-buncha": {
+  "src": "images/photos/f-buncha.jpg",
+  "by": "stuart_spivack",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:B%C3%BAn_ch%E1%BA%A3_Vietnamese_food.jpg"
+ },
+ "f-eggcoffee": {
+  "src": "images/photos/f-eggcoffee.jpg",
+  "by": "travel oriented",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:C%C3%A0_ph%C3%AA_tr%E1%BB%A9ng.jpg"
+ },
+ "nguyenhue": {
+  "src": "images/photos/nguyenhue.jpg",
+  "by": "Timback",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Nguyen_Hue_Street_2020.jpg"
+ },
+ "f-banhmi": {
+  "src": "images/photos/f-banhmi.jpg",
+  "by": "nsaum75¡שיחת!‎",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:B%C3%A1nh_m%C3%AC_th%E1%BB%8Bt_n%C6%B0%E1%BB%9Bng.png"
+ },
+ "f-comtam": {
+  "src": "images/photos/f-comtam.jpg",
+  "by": "Christopher Crouzet",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:C%C6%A1m_T%E1%BA%A5m,_Da_Nang,_Vietnam.jpg"
+ },
+ "lujiazui": {
+  "src": "images/photos/lujiazui.jpg",
+  "by": "xiquinhosilva",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Huangpu_Park_20124-Shanghai_(32208802494).jpg"
+ },
+ "tigerhill": {
+  "src": "images/photos/tigerhill.jpg",
+  "by": "Chainwit.",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:2024-Apr_Suzhou_-_Tiger_Hill_Pagoda_%E8%99%8E%E4%B8%98%E5%A1%94_(Huqiu_Ta)_-_img_05.jpg"
+ },
+ "oldq": {
+  "src": "images/photos/oldq.jpg",
+  "by": "Adam Jones from Kelowna, BC, Canada",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Old_Quarter_Street_Scene_-_Hanoi_-_Vietnam_(48256301206).jpg"
+ },
+ "f-chaca": {
+  "src": "images/photos/f-chaca.jpg",
+  "by": "Phương Huy (thảo luận)",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:Ch%E1%BA%A3_c%C3%A1_L%C3%A3_V%E1%BB%8Dng_H%C3%A0_N%E1%BB%99i.jpg"
+ },
+ "buivien": {
+  "src": "images/photos/buivien.jpg",
+  "by": "trungydang",
+  "license": "CC BY 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:B%C3%B9i_vi%E1%BB%87n_street-Ph%E1%BA%A1m_Ng%C5%A9_L%C3%A3o,_Qu%E1%BA%ADn_1,_TPHCM,_Vi%E1%BB%87t_Nam_-_panoramio.jpg"
+ },
+ "disney": {
+  "src": "images/photos/disney.jpg",
+  "by": "Jeremy Thompson",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Enchanted_Storybook_Castle.jpg"
+ },
+ "f-cifan": {
+  "src": "images/photos/f-cifan.jpg",
+  "by": "Galaxyharrylion",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:CiFanTuan2.jpg"
+ },
+ "f-ljshrimp": {
+  "src": "images/photos/f-ljshrimp.jpg",
+  "by": "猫猫的日记本",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Longjing_prawns_in_Hangzhou_Restaurant_2015-07.JPG"
+ },
+ "f-noodle": {
+  "src": "images/photos/f-noodle.jpg",
+  "by": "Fiarwalloe 2015",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:HK_food_%E8%B1%86%E8%B1%89_Black_Bean_oil_Noodle_Dec-2015_DSC.JPG"
+ },
+ "f-phosgn": {
+  "src": "images/photos/f-phosgn.jpg",
+  "by": "androog",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Pho_in_Saigon.jpg"
+ },
+ "f-pianerchuan": {
+  "src": "images/photos/f-pianerchuan.jpg",
+  "by": "N509FZ",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Pian%27erchuan_noodles_at_Kuiyuanguan_(20190807110615).jpg"
+ },
+ "f-squirrel": {
+  "src": "images/photos/f-squirrel.jpg",
+  "by": "Charles Haynes from Hobart, Australia",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Squirrel-shaped_mandarin_fish_(8482833747).jpg"
+ },
+ "f-sznoodle": {
+  "src": "images/photos/f-sznoodle.jpg",
+  "by": "N509FZ",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Red_soup_noodles_at_Songhelou_Suzhou_Noodles,_Parkview_Green_(20210126165303).jpg"
+ },
+ "hefang": {
+  "src": "images/photos/hefang.jpg",
+  "by": "钉钉",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Hefang_Street,_Hangzhou.jpg"
+ },
+ "pingjiang": {
+  "src": "images/photos/pingjiang.jpg",
+  "by": "song songroov",
+  "license": "CC BY 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Riverside_of_Pingjiang_Road,_Gusu,_Suzhou,_Jiangsu,_China,_215000.jpg"
+ },
+ "stay-han-0": {
+  "src": "images/photos/stay-han-0.jpg",
+  "by": "Jakub Hałun",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Street_seller_of_fingered_citrons_in_Old_Town_of_Hanoi,_20240204_1335_5772.jpg"
+ },
+ "stay-han-1": {
+  "src": "images/photos/stay-han-1.jpg",
+  "by": "Christakis Mina",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Noi_Bai_International_Airport_Terminal_2_Night_View.JPG"
+ },
+ "stay-hz-0": {
+  "src": "images/photos/stay-hz-0.jpg",
+  "by": "Carsten Ullrich from Shanghai, China",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Sunrise_at_Xihu_(Westlake),_Hangzhou_107.jpg"
+ },
+ "stay-hz-1": {
+  "src": "images/photos/stay-hz-1.jpg",
+  "by": "Staeiou",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Hangzhou_East_railway_station_interior.jpg"
+ },
+ "stay-sgn-0": {
+  "src": "images/photos/stay-sgn-0.jpg",
+  "by": "WiNG",
+  "license": "CC BY 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Tan_Son_Nhat_International_Airport_Level_3_Concourse.jpg"
+ },
+ "stay-sgn-1": {
+  "src": "images/photos/stay-sgn-1.jpg",
+  "by": "Tran Van Ngoc",
+  "license": "CC0",
+  "page": "https://commons.wikimedia.org/wiki/File:Ho_Chi_Minh_City_Skyline_at_Night.jpg"
+ },
+ "stay-sh-0": {
+  "src": "images/photos/stay-sh-0.jpg",
+  "by": "EditQ",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:East_Nanjing_Road_at_night,_Shanghai.jpg"
+ },
+ "stay-sh-1": {
+  "src": "images/photos/stay-sh-1.jpg",
+  "by": "kallerna",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Parks_and_Recreation_People%27s_Square_Shanghai_2.jpg"
+ },
+ "stay-sh-2": {
+  "src": "images/photos/stay-sh-2.jpg",
+  "by": "MNXANL",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:201806_Buildings_in_Beizhan_Subdistrict_and_near_Shanghai_Railway_Station.jpg"
+ },
+ "stay-sh-3": {
+  "src": "images/photos/stay-sh-3.jpg",
+  "by": "Livelikerw",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Street_View_of_Hengshan_Rd..JPG"
+ },
+ "stay-sh-4": {
+  "src": "images/photos/stay-sh-4.jpg",
+  "by": "Larry Qian",
+  "license": "CC0",
+  "page": "https://commons.wikimedia.org/wiki/File:Shanghai_Lujiazui_night_skyline_2017_-_Flickr.jpg"
+ },
+ "stay-sz-0": {
+  "src": "images/photos/stay-sz-0.jpg",
+  "by": "Zossolino",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:2015-09-24-154450_-_Bootskan%C3%A4le_in_Souzhou.jpg"
+ },
+ "stay-sz-1": {
+  "src": "images/photos/stay-sz-1.jpg",
+  "by": "Chainwit.",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:China-Suzhou_(2024)_Suzhou_Railway_Station_%E8%8B%8F%E5%B7%9E%E7%AB%99_-_img_06.jpg"
+ },
+ "trainst": {
+  "src": "images/photos/trainst.jpg",
+  "by": "Radek Kucharski from Warsaw, Poland",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Hanoi_Train_Street_(51955804948).jpg"
+ }
+}

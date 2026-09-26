@@ -1,0 +1,6 @@
+build/
+land.json
+.claude/
+__pycache__/
+images/raw/
+images/cand/
