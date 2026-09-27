@@ -102,7 +102,8 @@ function fromOSM(r) {
   const c = classify(r.category || r.class || p.osm_key, r.type || p.osm_value, r.place_rank ?? 30);
   const tr = travelFrom([lat, lon]);
   const where = r.address ? [r.address.city || r.address.town || r.address.county || r.address.state, r.address.country].filter(Boolean).join(', ') : [p.city || p.county || p.state, p.country].filter(Boolean).join(', ');
-  return { n: en, zh, ll:[lat, lon], mins: Math.round(tr.mins), mode: tr.mode, from: tr.from, dist: tr.dist, hub: tr.hub, hrs: c.hrs, indoor: c.indoor, stay: c.stay, transport: c.transport, osmKind: c.kind, where, hours: r.extratags?.opening_hours || '', importance: r.importance || 0 };
+  return { n: en, zh, ll:[lat, lon], mins: Math.round(tr.mins), mode: tr.mode, from: tr.from, dist: tr.dist, hub: tr.hub, hrs: c.hrs, indoor: c.indoor, stay: c.stay, transport: c.transport, osmKind: c.kind, where, hours: r.extratags?.opening_hours || '', importance: r.importance || 0,
+    osm: (r.osm_type || p.osm_type) && (r.osm_id || p.osm_id) ? { type: r.osm_type || p.osm_type, id: r.osm_id || p.osm_id } : null };
 }
 async function geocode(q) {
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 9000);
@@ -303,8 +304,11 @@ function addVerdict(hostId, anyway) {
       CITIES[c] = plan.extra[c]; CITYN[c] = p.n;
       plan.base[d] = c; plan.items[d] = plan.items[d].filter(i => getItem(i).custom);
     }
-    plan.custom[id] = { id, n: LANG === 'zh' && p.zh ? p.zh : v.name, l: p.zh || v.local || '', hrs: Math.min(p.hrs || 2, 8), custom: true, k:'place', when:'any', c, indoor: !!p.indoor, ll: p.ll || null };
+    plan.custom[id] = { id, n: LANG === 'zh' && p.zh ? p.zh : v.name, l: p.zh || v.local || '', hrs: Math.min(p.hrs || 2, 8), custom: true, k:'place', when:'any', c, indoor: !!p.indoor, ll: p.ll || null,
+      osm: p.osm || null, added: Date.now(), verdict: { level: v.level, lang: LANG, reasons: (v.reasons || []).filter(Boolean).slice(0, 3) },
+      info: { kind: p.osmKind || '', hours: p.hours || '', where: p.where || '', trip: p.mins ? { mins: p.mins, mode: p.mode, from: p.from } : null } };
     plan.items[d].push(id);
+    if (typeof enrichMine === 'function') enrichMine(id);
   }
   savePlan(); renderDays(); renderExplore();
   toast(t('{name} added to {day}', { name: LANG === 'zh' && v.local && isCJK(v.local) ? v.local : t(v.name), day: dayLabel(d) }) + (anyway ? ' · ' + t('Check the timing carefully') : ''));

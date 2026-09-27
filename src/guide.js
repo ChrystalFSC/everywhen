@@ -157,7 +157,7 @@ function renderDays() {
         ${items.length ? items.map((id, i) => { const it = getItem(id); if (!it) return '';
           const away = !it.custom && !cities.includes(it.c);
           return `<div class="item${it.custom ? ' own' : ''}">
-            ${PHOTOS[it.id] ? `<img class="thumb" src="${PHOTOS[it.id].src}" alt="" loading="lazy">` : `<span class="thumb ph" aria-hidden="true">${esc((it.l || it.n).slice(0, 2))}</span>`}
+            ${PHOTOS[it.id] ? `<img class="thumb" src="${PHOTOS[it.id].src}" alt="" loading="lazy">` : it.info?.img ? `<img class="thumb" src="${esc(it.info.img)}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="thumb ph" aria-hidden="true">${esc((it.l || it.n).slice(0, 2))}</span>`}
             <div class="imain"><div class="iname">${esc(it.custom ? it.n : nameOf(it))}${it.tier === 3 ? ' <span class="star" title="Top pick">★</span>' : ''}</div><div class="isub">${t(it.custom ? 'Your stop' : (it.k === 'food' ? 'Food' : it.k === 'buy' ? 'Souvenirs' : WHEN_LABEL[it.when]))} · ${t('about {h}', { h: fmtHrs(it.hrs) })}${away ? ` · <span style="color:var(--warn)">${t('not in {city} this day', { city: esc(cityName(it.c)) })}</span>` : ''}</div></div>
             <div class="ictl">
               <button class="ib" type="button" data-act="up" data-d="${x.d}" data-i="${i}" aria-label="${t('Move {n} earlier', { n: esc(it.n) })}"${i ? '' : ' disabled'}>↑</button>
@@ -192,7 +192,8 @@ $('#days').addEventListener('click', e => {
     if (!n) { $('#ownN-' + d).focus(); toast(t('Type a name for your stop first')); return; }
     if (findPlace(n)) { check(n, 'cki-' + d, d); return; }
     const id = 'u-' + Date.now().toString(36);
-    plan.custom[id] = { id, n, l:'', hrs: +$('#ownH-' + d).value, custom:true, k:'place', when:'any' };
+    plan.custom[id] = { id, n, l:'', hrs: +$('#ownH-' + d).value, hrsSet: true, custom:true, k:'place', when:'any', c: dayOf(d).cities.slice(-1)[0], added: Date.now(), info: {} };
+    if (typeof enrichMine === 'function') setTimeout(() => enrichMine(id), 0);
     plan.items[d].push(id); savePlan(); renderDays(); toast(t('{name} added to {day}', { name: n, day: dayLabel(d) })); return;
   }
   const b = e.target.closest('button[data-act]'); if (!b) return;
@@ -269,6 +270,8 @@ function spotsHtml(it) {
 }
 function renderExplore() {
   const kind = xKind;
+  $('#xCity').hidden = kind === 'mine';
+  if (kind === 'mine') { renderMine(); return; }
   $('#xContext').innerHTML = kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
   $('#xRank').hidden = kind === 'stay' || kind === 'skip';
   const g = $('#xGrid');

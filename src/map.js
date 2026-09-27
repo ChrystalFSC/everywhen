@@ -37,28 +37,29 @@ function hotelMarker(x, layer) {
 let xMap = null, xLayer = null, xMarkers = {};
 function renderExploreMap(list, kind) {
   const wrap = $('#xMapWrap'); if (!wrap) return;
-  const show = HAS_MAP && (kind === 'place' || kind === 'food' || kind === 'buy');
+  const show = HAS_MAP && (kind === 'place' || kind === 'food' || kind === 'buy' || (kind === 'mine' && list.some(it => it.ll)));
   wrap.hidden = !show; if (!show || wrap.offsetParent === null) return;
   if (!xMap) { xMap = baseMap($('#xMap')); xLayer = L.layerGroup().addTo(xMap); }
   xMap.invalidateSize();
   xLayer.clearLayers(); xMarkers = {};
   const planned = new Set(Object.values(plan.items).flat()), pts = [];
   list.forEach((it, i) => {
-    const spots = kind === 'place' ? [[COORDS[it.id], null]] : (it.spots || []).map((s, k) => [spotLL(it, k), s]);
+    const spots = kind === 'mine' ? [[it.ll, null]] : kind === 'place' ? [[COORDS[it.id], null]] : (it.spots || []).map((s, k) => [spotLL(it, k), s]);
     spots.filter(([ll]) => ll).forEach(([ll, s], j) => {
-      const mk = L.marker(ll, { icon: mkPin(i + 1, `t${it.tier}${planned.has(it.id) ? ' planned' : ''}${j ? ' alt' : ''}`), title: `${i + 1}. ${nameOf(it)}`, keyboard: true, riseOnHover: true }).addTo(xLayer);
-      const sub = s ? `${esc(LANG === 'zh' && it.c !== 'han' && it.c !== 'sgn' ? s.l : s.n)} · ${priceText(it.c, s.p, it.unit)}` : esc(t(WHEN_LABEL[it.when])) + ' · ' + fmtHrs(it.hrs);
-      mk.bindPopup(`<div class="pop"><b>${i + 1}. ${esc(nameOf(it))}</b><span>${sub}</span><div class="pop-acts"><button type="button" data-card="${it.id}">${t('See details')}</button><a href="${mapLink(it.c, s ? s.l : it.l, ll)}" target="_blank" rel="noopener">${t(CITIES[it.c].lang === 'zh' ? 'Open in Amap' : 'Open in Google Maps')}</a></div></div>`);
+      const mk = L.marker(ll, { icon: mkPin(i + 1, `${kind === 'mine' ? 'mine' : 't' + it.tier}${planned.has(it.id) ? ' planned' : ''}${j ? ' alt' : ''}`), title: `${i + 1}. ${kind === 'mine' ? it.n : nameOf(it)}`, keyboard: true, riseOnHover: true }).addTo(xLayer);
+      const nm = kind === 'mine' ? (LANG === 'zh' && it.l && hasCJK(it.l) ? it.l : it.n) : nameOf(it), ic = kind === 'mine' ? MINE_CITY(it.c) : it.c;
+      const sub = kind === 'mine' ? esc(it.info?.kind ? kindLabel(it.info.kind) : t('Your place')) + ' · ' + fmtHrs(it.hrs || 1.5) : s ? `${esc(LANG === 'zh' && it.c !== 'han' && it.c !== 'sgn' ? s.l : s.n)} · ${priceText(it.c, s.p, it.unit)}` : esc(t(WHEN_LABEL[it.when])) + ' · ' + fmtHrs(it.hrs);
+      mk.bindPopup(`<div class="pop"><b>${i + 1}. ${esc(nm)}</b><span>${sub}</span><div class="pop-acts"><button type="button" data-card="${esc(it.id)}">${t('See details')}</button><a href="${mapLink(ic, s ? s.l : (it.l || it.n), ll)}" target="_blank" rel="noopener">${t(CITIES[ic]?.lang === 'vi' ? 'Open in Google Maps' : 'Open in Amap')}</a></div></div>`);
       (xMarkers[it.id] ||= []).push(mk); pts.push(ll);
     });
   });
-  staysIn(xCity).forEach(x => pts.push(hotelMarker(x, xLayer)));
+  (kind === 'mine' ? myStays.filter(x => x.ll) : staysIn(xCity)).forEach(x => pts.push(hotelMarker(x, xLayer)));
   const [la, lo, z] = MAP_CENTRE[xCity] || MAP_CENTRE.sh;
   // Frame the main cluster; far-out picks (a water town, Disneyland) keep their pins but don't zoom the map out.
   const mid = [med(pts.map(p => p[0])), med(pts.map(p => p[1]))], core = pts.filter(p => km(p, mid) <= 9);
   const view = core.length >= 2 ? core : pts;
   if (view.length > 1) xMap.fitBounds(view, { padding: [28, 28], maxZoom: 15 }); else if (view.length) xMap.setView(view[0], 15); else xMap.setView([la, lo], z);
-  $('#xMapNote').textContent = t(kind === 'place' ? 'Numbers match the cards below. Gold pins are top picks; a green ring means it’s in your plan.' : 'Each pin is a recommended shop or restaurant; the number matches the card below.');
+  $('#xMapNote').textContent = t(kind === 'mine' ? 'Your own places. Numbers match the cards below; a green ring means it’s in your plan.' : kind === 'place' ? 'Numbers match the cards below. Gold pins are top picks; a green ring means it’s in your plan.' : 'Each pin is a recommended shop or restaurant; the number matches the card below.');
 }
 function flyTo(id) {
   const m = xMarkers[id]?.[0]; if (!m || !xMap) return;
@@ -150,7 +151,7 @@ document.addEventListener('click', e => {
 
 /* ---------- your stays: found from the address, or placed by tapping the map ---------- */
 // OpenStreetMap rarely knows Chinese house numbers, so fall back to the street, then the name.
-async function findPlace(x) {
+async function findStayPlace(x) {
   const city = CITY_ZH[x.city] || CITY_N[x.city], [la, lo] = MAP_CENTRE[x.city] || MAP_CENTRE.sh;
   const road = (x.addr || '').replace(/^(上海市?|苏州市?|杭州市?)/, '').replace(/^[^区县]{1,4}[区县]/, '').match(/^(.+?[路街道巷弄])/)?.[1];
   const qs = [[x.addr, true], [road && road + ' ' + city, false], [x.name && x.name + ' ' + city, true]].filter(q => q[0]);
@@ -163,7 +164,7 @@ async function findPlace(x) {
 }
 async function locateStay(x) {
   if (!navigator.onLine) return;
-  try { const f = await findPlace(x); if (f && !x.ll) { x.ll = f.ll; store.set('stays', myStays); renderDays(); renderExplore(); } } catch {}
+  try { const f = await findStayPlace(x); if (f && !x.ll) { x.ll = f.ll; store.set('stays', myStays); renderDays(); renderExplore(); } } catch {}
 }
 let sMap = null, sMark = null, sLL = null;
 function stayMapOpen(ll, city) {
@@ -191,7 +192,7 @@ $('#sFind')?.addEventListener('click', async () => {
   if (!x.name && !x.addr) { $('#sMapHint').textContent = t('Type the name or address first.'); return; }
   b.disabled = true; $('#sMapHint').textContent = t('Looking it up…');
   try {
-    const f = await findPlace(x);
+    const f = await findStayPlace(x);
     if (f) { setStayPin(f.ll, t(f.exact ? 'Found it. Check the pin and drag it if it’s off.' : 'Found the street only. Drag the pin to the exact spot.')); sMap.setView(f.ll, f.exact ? 16 : 15); }
     else $('#sMapHint').textContent = t('Couldn’t find it. Tap the map where your stay is instead.');
   } catch { $('#sMapHint').textContent = t(navigator.onLine === false ? 'You’re offline. Tap the map to pin it instead.' : 'Couldn’t reach the map search. Tap the map to pin it instead.'); }

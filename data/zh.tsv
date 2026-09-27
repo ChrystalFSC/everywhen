@@ -1288,3 +1288,34 @@ Location on the map	地图位置
 Find on map	在地图上查找
 Map: tap to pin your stay	地图：点击标出住宿
 Map of these recommendations	推荐地点地图
+Your place	你的地点
+Your own places. Numbers match the cards below; a green ring means it’s in your plan.	你自己添加的地点。数字对应下方卡片，绿圈表示已在行程里。
+Yours	我的
+Photo and text:	图片和文字：
+Address	地址
+Opening hours	营业时间
+Getting there	怎么去
+About {m} on foot from {from}	从{from}步行约{m}
+About {m} by {mode} from {from}	从{from}乘{mode}约{m}
+Cuisine	菜系
+Phone	电话
+Website	网站
+Looking up details…	正在查找详情…
+You’re offline. Details will load next time you have internet.	你已离线。下次联网时会自动加载详情。
+Couldn’t load details. Wikipedia is blocked in China, so try again before you fly or on roaming data.	无法加载详情。维基百科在中国无法访问，请出发前或用漫游流量再试。
+Details haven’t been looked up yet.	还没有查找详情。
+No public details found for this place. Add your own notes below.	没有找到这个地点的公开资料。可在下方写备注。
+Indoors	室内
+Not in your plan	未加入行程
+Your notes	你的备注
+Tickets, who recommended it, what to order…	门票、谁推荐的、点什么…
+Refresh details	更新详情
+Look up details	查找详情
+Remove	移除
+Places you added yourself, with details looked up from OpenStreetMap and Wikipedia and saved for offline use. Add more with <b>Can I go to…?</b> on the Plan tab.	你自己添加的地点，详情来自 OpenStreetMap 和维基百科，并已保存供离线使用。可在“计划”页用<b>我能去…吗？</b>继续添加。
+No places of your own yet.	还没有你自己的地点。
+Search any place with Can I go to…? on the Plan tab, or choose “Something else” on a day. It will appear here with its details.	在“计划”页用“我能去…吗？”搜索任何地点，或在某天选择“其他”。它会连同详情出现在这里。
+Go to Plan	去计划页
+Tap again to remove	再点一次确认移除
+Removed {n}	已移除 {n}
+Note saved	备注已保存

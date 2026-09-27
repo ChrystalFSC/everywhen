@@ -5,7 +5,7 @@ const root = path.join(__dirname, '..');
 const zh = new Set(fs.readFileSync(path.join(root, 'data/zh.tsv'), 'utf8').split(/\r?\n/).filter(l => l && !l.startsWith('#')).map(l => l.split('\t')[0]));
 const miss = new Set();
 const add = s => { if (s && /[A-Za-z]{3}/.test(s) && !zh.has(s)) miss.add(s); };
-for (const f of ['src/everywhen.html', 'src/guide.js', 'src/evaluate.js', 'src/translate.js', 'src/engine.js', 'src/map.js']) {
+for (const f of ['src/everywhen.html', 'src/guide.js', 'src/evaluate.js', 'src/translate.js', 'src/engine.js', 'src/map.js', 'src/mine.js']) {
   const src = fs.readFileSync(path.join(root, f), 'utf8');
   for (const m of src.matchAll(/\bt\(((?:[^()]|\([^()]*\))*)\)/g)) {
     for (const q of m[1].matchAll(/'((?:[^'\\]|\\.)*)'/g)) add(q[1].replace(/\\'/g, "'"));
