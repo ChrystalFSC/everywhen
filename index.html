@@ -1404,7 +1404,7 @@ function stepPlay(now) {
 }
 function startPlay() {
   if (+scrub.value >= 1000) { scrub.value = 0; setT(TRIP_START); }
-  if (reduced) { setT(TRIP_END); return; }
+  // Play is the viewer's own request, so it animates even with reduced motion on; only ambient motion is switched off.
   playing = true; playLast = 0; intro = 1; $('#sky').classList.add('live');
   $('#playBtn').setAttribute('aria-label', 'Pause');
   $('#playIcon').innerHTML = '<rect x="6.5" y="5" width="4" height="14" rx="1"/><rect x="13.5" y="5" width="4" height="14" rx="1"/>';
