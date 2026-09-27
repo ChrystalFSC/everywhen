@@ -18,7 +18,7 @@ const CTX = {
   sgn: 'This is a <b>short night</b>. You land at 21:00 on Wed 17 Feb and need to be back at Tan Son Nhat by 06:50. Sleep close to the airport, or go out for a late bite if you still have energy.'
 };
 const INTERESTS = [['history','History & culture'],['views','Views & skyline'],['nature','Gardens & nature'],['food','Food'],['shopping','Shopping'],['night','Nightlife']];
-const G = (id, c, k, tier, n, l, o) => ({ id: k === 'food' ? 'f-' + id : id, c, k, tier, n, l, hrs: k === 'food' ? .75 : 1.5, when:'any', zone:'', tags:[], tip:'', ...o });
+const G = (id, c, k, tier, n, l, o) => ({ id: k === 'food' ? 'f-' + id : k === 'buy' ? 'b-' + id : id, c, k, tier, n, l, hrs: k === 'food' ? .75 : k === 'buy' ? .5 : 1.5, when:'any', zone:'', tags:[], tip:'', ...o });
 const ITEMS = [
   /* ---- Shanghai ---- */
   G('bund','sh','place',3,'The Bund','外滩',{ aka:['waitan', 'the bund', '外滩观光'], zone:'bund', hrs:1.5, when:'evening', tags:['views','history'], wiki:'The_Bund', why:'The defining view of Shanghai, free and open all night.', how:'Line 2 or 10 · East Nanjing Rd', d:'The colonial-era riverfront facing the Pudong skyline. Walk the promenade when both banks are lit up.', tip:'The building lights usually switch off around 22:00.' }),
@@ -168,6 +168,98 @@ const EAT = {
   ]
 };
 ITEMS.forEach(i => { if (i.k === 'food') i.spots = EAT[i.id.slice(2)] || []; });
+
+/* Souvenirs worth bringing home, ranked like places. Spots reuse the food format; `unit` says what the price covers. */
+const BUY_ITEMS = [
+  G('whiterabbit','sh','buy',3,'White Rabbit milk candy','大白兔奶糖',{ aka:['white rabbit', 'da bai tu'], unit:'per tin or bag', why:'Shanghai’s own sweet since 1959, cheap and easy to pack.', d:'Chewy milk toffees wrapped in edible rice paper. Gift tins and retro packs make good presents.', tip:'Buy at the First Food Store rather than at tourist stalls, where the same bags cost more.' }),
+  G('butterfly','sh','buy',3,'Park Hotel butterfly cookies','国际饭店蝴蝶酥',{ aka:['butterfly cookie', 'hu die su', 'park hotel'], unit:'per box', why:'The pastry Shanghai people queue for and carry home.', d:'Crisp, buttery puff-pastry palmiers from the Park Hotel’s bakery, sold in gift boxes.', tip:'The queue can take 30–60 minutes. Go on a weekday morning, and buy close to your flight so they stay crisp.' }),
+  G('tailor','sh','buy',3,'Tailor-made clothes','定做衣服',{ aka:['south bund fabric market', 'tailor', 'qipao', 'suit'], unit:'per piece', why:'You have six nights, enough for a shirt, qipao or suit made to measure.', d:'Choose fabric, get measured and collect a finished piece a few days later, for much less than at home.', tip:'Order on your first full day (Fri 19 Feb) so there is time for a fitting. Agree the price and pick-up date in writing.' }),
+  G('tea-sh','sh','buy',2,'Chinese tea','茶叶',{ aka:['tea', 'tianshan tea city'], unit:'per 100 g', why:'A tea market with hundreds of stalls and fair prices.', d:'Oolong, pu’er, Longjing and jasmine, with free tastings before you buy.', tip:'Taste first and compare two or three stalls. Prices are often quoted per 500 g (斤), so check.' }),
+  G('warrior','sh','buy',1,'Warrior sneakers','回力鞋',{ aka:['warrior shoes', 'huili'], unit:'per pair', why:'Retro Shanghai canvas sneakers that cost less than at home.', d:'A Shanghai brand since 1927, now a cult streetwear shoe.', tip:'Check sizes carefully: Chinese sizing runs small.' }),
+  G('silk-sz','sz','buy',3,'Suzhou silk and embroidery','苏绣丝绸',{ aka:['su embroidery', 'suzhou silk', 'su xiu'], unit:'per scarf or piece', why:'Suzhou is China’s silk city, and Su embroidery is famous nationwide.', d:'Silk scarves, pyjamas and fine double-sided embroidery, from small gifts to framed art.', tip:'Real silk feels cool and smells like burnt hair when a thread is burned. Cheap “silk” at stalls is often polyester.' }),
+  G('caizhizhai','sz','buy',2,'Suzhou sweets','采芝斋苏式糖果',{ aka:['caizhizhai', 'suzhou candy'], unit:'per box', why:'A 150-year-old sweet shop on the main street.', d:'Pine-nut brittle, candied fruit and other Suzhou-style sweets in gift boxes.' }),
+  G('fan-sz','sz','buy',1,'Sandalwood fan','檀香扇',{ aka:['sandalwood fan', 'tan xiang shan'], unit:'per fan', why:'A light, fragrant gift that is hard to break.', d:'Folding fans of carved sandalwood that keep their scent for years.' }),
+  G('longjing-buy','hz','buy',3,'Longjing (Dragon Well) tea','西湖龙井',{ aka:['dragon well tea', 'longjing tea', 'west lake longjing'], unit:'per 100 g', why:'Buy China’s most famous green tea where it grows.', d:'Flat, jade-green leaves with a chestnut aroma. Good Longjing is not cheap.', tip:'In February any “new season” or “pre-Qingming” Longjing is last year’s tea or mislabelled: the new crop is picked from late March.' }),
+  G('silk-hz','hz','buy',2,'Hangzhou silk','杭州丝绸',{ aka:['china silk city', 'hangzhou silk'], unit:'per scarf', why:'A whole street of silk shops with more choice than Shanghai.', d:'Scarves, ties, qipao and bedding at China Silk City.' }),
+  G('scissors','hz','buy',2,'Zhang Xiaoquan scissors','张小泉剪刀',{ aka:['zhang xiaoquan', 'scissors'], unit:'per pair', why:'A Hangzhou brand since 1663 and a practical gift.', d:'Kitchen and tailor’s scissors from China’s best-known scissor maker.', tip:'Pack them in checked luggage, not your cabin bag.' }),
+  G('fan-hz','hz','buy',1,'Wangxingji fan','王星记扇子',{ aka:['wangxingji', 'hangzhou fan'], unit:'per fan', why:'Hand-painted fans from a 19th-century Hangzhou maker.', d:'Black paper fans with painted landscapes or calligraphy.' }),
+  G('coffee-han','han','buy',3,'Vietnamese coffee and a phin filter','Cà phê Việt Nam',{ aka:['vietnamese coffee', 'phin', 'ca phe'], unit:'per bag', why:'Strong, chocolatey coffee and the little metal filter to brew it.', d:'Ground robusta or blends, plus a phin drip filter, to make egg or iced coffee at home.', tip:'Shops in town are much cheaper than Noi Bai Airport.' }),
+  G('omai','han','buy',2,'Ô mai (candied fruit)','Ô mai',{ aka:['o mai', 'candied fruit', 'hang duong'], unit:'per box', why:'Hanoi’s traditional gift snack, sold on one Old Quarter street.', d:'Dried apricot, plum and ginger preserved with sugar, salt and liquorice. Sweet, salty and sour.', tip:'Ask to taste before you buy. Hàng Đường street has shop after shop.' }),
+  G('silk-han','han','buy',2,'Silk from Hàng Gai','Lụa Hà Nội',{ aka:['hang gai', 'hanoi silk'], unit:'per scarf', why:'Hanoi’s silk street, a short walk from Hoan Kiem Lake.', d:'Silk scarves, embroidered bags and tailored áo dài.', tip:'Wednesday evening is enough time for a scarf, not for tailoring.' }),
+  G('lacquer','han','buy',1,'Lacquerware','Sơn mài',{ aka:['son mai', 'lacquer'], unit:'per piece', why:'Glossy bowls and boxes, often inlaid with eggshell or mother-of-pearl.', d:'Vietnamese lacquer bowls, trays and coasters. Light, but pack them well.' }),
+  G('coffee-sgn','sgn','buy',2,'G7 or Trung Nguyên coffee','Cà phê G7',{ aka:['g7', 'trung nguyen'], unit:'per box', why:'The easiest gift to grab during your overnight transfer.', d:'Instant 3-in-1 sachets or ground coffee from Vietnam’s best-known brand.', tip:'Markets are closed when you land at 21:00. A convenience store is cheaper than the airport.' }),
+  G('cashew','sgn','buy',1,'Cashew nuts','Hạt điều',{ aka:['cashew', 'hat dieu'], unit:'per 500 g', why:'Vietnam is one of the world’s biggest cashew exporters.', d:'Roasted, salted cashews, sold in vacuum-sealed bags.' })
+];
+ITEMS.push(...BUY_ITEMS);
+const SHOP = {
+  whiterabbit: [
+    SP('First Food Store', '上海第一食品商店', '720 Nanjing East Rd, Huangpu', '黄浦区南京东路720号', 20, 60, 'Open until 22:00.'),
+    SP('Any supermarket', '超市', 'Look for the rabbit on the bag', '', 15, 40)
+  ],
+  butterfly: [
+    SP('Park Hotel Bakery', '国际饭店西饼屋', '28 Huanghe Rd, Huangpu', '黄浦区黄河路28号', 35, 70, 'Entrance is on Huanghe Road, next to the hotel.')
+  ],
+  tailor: [
+    SP('South Bund Fabric Market', '南外滩轻纺面料市场', '399 Lujiabang Rd, Huangpu', '黄浦区陆家浜路399号', 300, 1500, 'Shirts from about ¥300, suits from about ¥1,000.')
+  ],
+  'tea-sh': [
+    SP('Tianshan Tea City', '天山茶城', '520 Zhongshan West Rd, Changning', '长宁区中山西路520号', 50, 300)
+  ],
+  warrior: [
+    SP('Nanjing East Road shops', '南京东路步行街', 'Nanjing East Rd pedestrian street', '黄浦区南京东路步行街', 100, 300)
+  ],
+  'silk-sz': [
+    SP('Suzhou Silk Museum shop', '苏州丝绸博物馆', '2001 Renmin Rd, Gusu', '姑苏区人民路2001号', 100, 800, 'Museum and shop in one visit.'),
+    SP('Shops on Pingjiang Road', '平江路', 'Pingjiang Rd, Gusu', '姑苏区平江路', 50, 300)
+  ],
+  caizhizhai: [
+    SP('Caizhizhai', '采芝斋', '91 Guanqian St, Gusu', '姑苏区观前街91号', 30, 100)
+  ],
+  'fan-sz': [
+    SP('Shops on Guanqian Street', '观前街', 'Guanqian St, Gusu', '姑苏区观前街', 40, 200)
+  ],
+  'longjing-buy': [
+    SP('Tea farms in Longjing village', '龙井村', 'Longjing Rd, West Lake', '西湖区龙井路 龙井村', 150, 500, 'Buy from a farm where you can taste first.'),
+    SP('Meijiawu tea village', '梅家坞', 'Meiling Rd, West Lake', '西湖区梅灵北路 梅家坞', 150, 500)
+  ],
+  'silk-hz': [
+    SP('China Silk City', '中国丝绸城', '253 Xinhua Rd, Gongshu', '拱墅区新华路253号', 80, 500)
+  ],
+  scissors: [
+    SP('Zhang Xiaoquan on Hefang Street', '张小泉 河坊街', 'Hefang St, Shangcheng', '上城区河坊街', 30, 150)
+  ],
+  'fan-hz': [
+    SP('Wangxingji on Hefang Street', '王星记 河坊街', 'Hefang St, Shangcheng', '上城区河坊街', 50, 300)
+  ],
+  'coffee-han': [
+    SP('Old Quarter coffee shops', 'Phố Hàng Bạc', 'Hàng Bạc and Hàng Buồm streets, Hoàn Kiếm', '', 100000, 300000, 'Open in the evening, unlike Đồng Xuân Market.'),
+    SP('Trung Nguyên Legend shops', 'Trung Nguyên Legend', 'Several in Hoàn Kiếm', '', 150000, 400000)
+  ],
+  omai: [
+    SP('Hàng Đường street', 'Phố Hàng Đường', 'Hàng Đường St, Hoàn Kiếm', '', 80000, 250000)
+  ],
+  'silk-han': [
+    SP('Hàng Gai street', 'Phố Hàng Gai', 'Hàng Gai St, Hoàn Kiếm', '', 150000, 800000)
+  ],
+  lacquer: [
+    SP('Shops on Nhà Chung', 'Phố Nhà Chung', 'Nhà Chung St, by St Joseph’s Cathedral', '', 150000, 800000)
+  ],
+  'coffee-sgn': [
+    SP('Any convenience store', 'Circle K / FamilyMart', 'Everywhere in District 1, open 24 hours', '', 50000, 150000),
+    SP('Tan Son Nhat international terminal', 'Sân bay Tân Sơn Nhất', 'Airside shops, before your 09:20 flight', '', 150000, 400000)
+  ],
+  cashew: [
+    SP('Any convenience store', 'Circle K / FamilyMart', 'Everywhere in District 1, open 24 hours', '', 150000, 300000)
+  ]
+};
+BUY_ITEMS.forEach(i => i.spots = SHOP[i.id.slice(2)] || []);
+const BUY_TIP = {
+  sh: 'Shanghai is the best stop for gifts. Buy snacks near the end of your stay so they stay fresh, and pay with Alipay or WeChat Pay.',
+  sz: 'Suzhou is the place for silk and embroidery. Bargaining is fine at market stalls, but not in fixed-price museum shops.',
+  hz: 'Tea is Hangzhou’s gift. Always taste before buying, and ask for the price per 50 g or 100 g, not per 斤 (500 g).',
+  han: 'You have one evening in Hanoi. The Old Quarter has a street for almost everything: Hàng Gai for silk, Hàng Đường for sweets.',
+  sgn: 'You land at 21:00 and leave at 09:20, so there is little time to shop. Hanoi, on the way home, has far more choice.'
+};
 
 const BY = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 

@@ -76,6 +76,8 @@ __STYLES__
           <span><i style="background:repeating-linear-gradient(90deg,var(--warn) 0 4px,transparent 4px 7px)"></i>Not booked yet</span>
           <span><i style="background:repeating-linear-gradient(90deg,var(--muted) 0 2px,transparent 2px 5px)"></i>Overnight transfer</span>
         </div>
+        <p class="nights-hint">Tap a night to add or edit where you stay.</p>
+        <div class="stays" id="stays"></div>
       </section>
 
       <!-- SAY -->
@@ -185,6 +187,7 @@ __STYLES__
           <div class="seg" role="group" aria-label="Type" id="xKind">
             <button type="button" data-v="place" aria-pressed="true">Places</button>
             <button type="button" data-v="food" aria-pressed="false">Food</button>
+            <button type="button" data-v="buy" aria-pressed="false">Souvenirs</button>
             <button type="button" data-v="stay" aria-pressed="false">Where to stay</button>
             <button type="button" data-v="skip" aria-pressed="false">Skip these</button>
           </div>
@@ -215,6 +218,26 @@ __STYLES__
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <!-- Show overlay -->
+<dialog class="dlg" id="stayDlg" aria-labelledby="stayDlgT">
+  <form id="stayForm" novalidate>
+    <h2 id="stayDlgT">Add a stay</h2>
+    <div class="field"><label for="sName">Name</label><input id="sName" autocomplete="off" placeholder="Hotel, homestay or apartment"></div>
+    <div class="dlg-row">
+      <div class="field"><label for="sFrom">Check-in</label><select class="sel" id="sFrom"></select></div>
+      <div class="field"><label for="sTo">Check-out</label><select class="sel" id="sTo"></select></div>
+      <div class="field"><label for="sCity">City</label><select class="sel" id="sCity"></select></div>
+    </div>
+    <div class="field"><label for="sAddr">Address in the local language</label><textarea id="sAddr" placeholder="Copy it from your booking, e.g. 上海市黄浦区…"></textarea><span class="hint">This is what a driver needs. It also goes on the Say tab.</span></div>
+    <div class="dlg-row two">
+      <div class="field"><label for="sRef">Booking reference</label><input id="sRef" autocomplete="off"></div>
+      <div class="field"><label for="sPrice">Price</label><input id="sPrice" autocomplete="off" placeholder="e.g. RM 480 total"></div>
+    </div>
+    <div class="field"><label for="sCancel">Free cancellation until</label><input id="sCancel" autocomplete="off" placeholder="e.g. 17 Feb, 18:00"></div>
+    <div class="field"><label for="sNote">Notes</label><textarea id="sNote" placeholder="Check-in time, door code, Wi-Fi…"></textarea></div>
+    <p class="form-err" id="sErr" role="alert"></p>
+    <div class="dlg-acts"><button class="btn" type="submit">Save stay</button><button class="btn ghost" type="button" id="sCancelBtn">Cancel</button><button class="sbtn danger" type="button" id="sDel" hidden>Delete stay</button></div>
+  </form>
+</dialog>
 <div class="show" id="show" role="dialog" aria-modal="true" aria-labelledby="showText" hidden>
   <div class="show-card">
     <div class="show-top">
@@ -281,16 +304,26 @@ SEGS.forEach(s => { if (s.kind === 'air') { s.t0 = LEGS[s.leg].dep; s.t1 = LEGS[
 SEGS.push({ kind:'ground', city:'KUL', t0:LEGS[3].arr, t1:TRIP_END, w:0, stage:'home' });
 { const tot = SEGS.reduce((a, s) => a + s.w, 0); let c = 0; SEGS.forEach(s => { s.c0 = c / tot; c += s.w; s.c1 = c / tot; }); SEGS[SEGS.length-2].c1 = 1; SEGS[SEGS.length-1].c0 = SEGS[SEGS.length-1].c1 = 1; }
 
-const NIGHTS = [
-  { d:17, place:'Ho Chi Minh City', short:'HCMC', kind:'transit', note:'Transfer night. Airside or a room nearby.' },
-  { d:18, place:'Shanghai', short:'Shanghai', kind:'open', note:'Not booked yet' },
-  { d:19, place:'Shanghai', short:'Shanghai', kind:'open', note:'Not booked yet' },
-  { d:20, place:'Shanghai', short:'Shanghai', kind:'open', note:'Not booked yet' },
-  { d:21, place:'Shanghai', short:'Shanghai', kind:'open', note:'Not booked yet' },
-  { d:22, place:'Shanghai Mido Resort Homestay', short:'Mido', kind:'booked', note:'Booked · free cancellation until 21 Feb 18:00' },
-  { d:23, place:'Shanghai Mido Resort Homestay', short:'Mido', kind:'booked', note:'Booked' },
-  { d:24, place:'Hanoi', short:'Hanoi', kind:'transit', note:'Transfer night. Airside or a room nearby.' }
+/* Where you sleep. The eight nights come from the flights; your stays (saved on this device) fill them in. */
+const NIGHT_BASE = [
+  { d:17, place:'Ho Chi Minh City', short:'HCMC', city:'sgn', kind:'transit', note:'Transfer night. Airside or a room nearby.' },
+  ...[18, 19, 20, 21, 22, 23].map(d => ({ d, place:'Shanghai', short:'Shanghai', city:'sh', kind:'open', note:'Not booked yet' })),
+  { d:24, place:'Hanoi', short:'Hanoi', city:'han', kind:'transit', note:'Transfer night. Airside or a room nearby.' }
 ];
+const STAY_CITIES = { 17:['sgn'], 24:['han'] }, STAY_CN = ['sh', 'sz', 'hz'];
+const citiesForNight = d => STAY_CITIES[d] || STAY_CN;
+const STAYS_DEFAULT = [{ id:'mido', name:'Shanghai Mido Resort Homestay', city:'sh', from:22, to:24, addr:'', ref:'', cancel:'21 Feb, 18:00 Shanghai time', price:'', note:'' }];
+let myStays = (() => { const v = store.get('stays', null); return Array.isArray(v) ? v.filter(x => x && x.name && x.to > x.from) : STAYS_DEFAULT.map(x => ({ ...x })); })();
+const NIGHTS = [];
+const stayShort = n => /[㐀-鿿]/.test(n) ? n.slice(0, 5) : (n.replace(/^(Shanghai|Suzhou|Hangzhou|Hanoi|Ha Noi|Ho Chi Minh City|Saigon|The)\s+/i, '').split(/\s+/)[0] || n).slice(0, 12);
+function rebuildNights() {
+  NIGHTS.length = 0;
+  NIGHT_BASE.forEach(b => {
+    const st = myStays.find(x => x.from <= b.d && b.d < x.to);
+    NIGHTS.push(st ? { d:b.d, place:st.name, short:stayShort(st.name), city:st.city, kind:'booked', note:'Booked', stay:st } : { ...b });
+  });
+}
+rebuildNights();
 
 /* ---------------- time formatting ---------------- */
 const fmtCache = {};
@@ -633,6 +666,8 @@ function passHtml(L) {
 function hopHtml(title, chips, body) { return `<div class="hop"><div class="hop-title">${title}${chips}</div><p>${body}</p></div>`; }
 function renderJourney() {
   const back = (L) => hm(L.dep - 150 * M, CITY[L.from].tz);
+  const openCN = NIGHTS.filter(n => n.kind === 'open').length;
+  const staysLine = myStays.filter(x => STAY_CN.includes(x.city)).sort((a, b) => a.from - b.from).map(x => ' ' + t('{name}: {a}–{b} Feb.', { name: '<b>' + esc(x.name) + '</b>', a: x.from, b: x.to })).join('');
   $('#journey').innerHTML = `
     <div class="sec-head"><h2>Your flights</h2><p>All times are local to each airport.</p></div>
     <div class="dir-label"><span class="chip out">Outbound</span><span class="line"></span><span class="eyebrow">17–18 Feb</span></div>
@@ -640,7 +675,7 @@ function renderJourney() {
     ${hopHtml(t('<span class="mono">{d}</span> in Ho Chi Minh City', { d: dur(LEGS[1].dep - LEGS[0].arr) }), ` <span class="chip">${t('Overnight')}</span> <span class="chip good">${t('Bags checked through')}</span>`,
       t('Land <b>21:00</b>, fly <b>09:20</b>. Tan Son Nhat sits close to the city centre. Leaving the airport means going through Vietnamese immigration and security again, so be back at the terminal by <b>{time}</b>.', { time: back(LEGS[1]) }))}
     ${passHtml(LEGS[1])}
-    ${hopHtml(t('<span class="mono">6</span> nights in Shanghai'), ` <span class="chip warn">${t('4 nights not booked')}</span>`, t('Pudong T1 into the city by Maglev and Metro Line 2, or by DiDi. The Mido Homestay covers 22–24 Feb.'))}
+    ${hopHtml(t('<span class="mono">6</span> nights in Shanghai'), openCN ? ` <span class="chip warn">${t(openCN === 1 ? '1 night not booked' : '{n} nights not booked', { n: openCN })}</span>` : ` <span class="chip good">${t('All nights booked')}</span>`, t('Pudong T1 into the city by Maglev and Metro Line 2, or by DiDi.') + staysLine)}
     <div class="dir-label"><span class="chip ret">Return</span><span class="line"></span><span class="eyebrow">24–25 Feb</span></div>
     ${passHtml(LEGS[2])}
     ${hopHtml(t('<span class="mono">{d}</span> in Hanoi', { d: dur(LEGS[3].dep - LEGS[2].arr) }), ` <span class="chip">${t('Overnight')}</span> <span class="chip good">${t('Bags checked through')}</span>`,
@@ -648,9 +683,91 @@ function renderJourney() {
     ${passHtml(LEGS[3])}`;
   $('#nights').innerHTML = NIGHTS.map(n => {
     const ts = at(2027, 2, n.d, 12, 0, 8);
-    return `<div class="night ${n.kind}" title="${esc(t(n.place) + ' · ' + t(n.note))}"><span class="dw">${F('Asia/Shanghai', { weekday:'short' }).format(ts)}</span><span class="dd">${n.d}</span><span class="st" aria-hidden="true"></span><span class="pl">${esc(t(n.short))}</span><span class="sr">${esc(t(n.note))}</span></div>`;
+    const lbl = n.stay ? t('{day}: {name}. Edit this stay.', { day: day(ts, 'Asia/Shanghai'), name: n.place }) : t('{day}: {note}. Add a stay.', { day: day(ts, 'Asia/Shanghai'), note: t(n.note) });
+    return `<button type="button" class="night ${n.kind}" data-night="${n.d}" title="${esc(lbl)}" aria-label="${esc(lbl)}"><span class="dw">${F('Asia/Shanghai', { weekday:'short' }).format(ts)}</span><span class="dd">${n.d}</span><span class="st" aria-hidden="true"></span><span class="pl">${esc(n.stay ? n.short : t(n.short))}</span></button>`;
   }).join('');
+  renderStays();
 }
+
+/* ---------------- your stays: add, edit, delete ---------------- */
+const nightTs = d => at(2027, 2, d, 12, 0, 8);
+const pinIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+const stayLang = c => STAY_CN.includes(c) ? 'zh' : 'vi';
+function stayMap(x) {
+  const q = x.addr?.trim() || x.name;
+  return stayLang(x.city) === 'zh' ? `https://uri.amap.com/search?keyword=${encodeURIComponent(q)}&city=${encodeURIComponent({ sh:'上海', sz:'苏州', hz:'杭州' }[x.city])}&callnative=1` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q + ', ' + CITY_N[x.city])}`;
+}
+const CITY_N = { sh:'Shanghai', sz:'Suzhou', hz:'Hangzhou', sgn:'Ho Chi Minh City', han:'Hanoi' };
+function renderStays() {
+  const host = $('#stays'); if (!host) return;
+  const open = NIGHTS.filter(n => n.kind === 'open');
+  host.innerHTML = myStays.slice().sort((a, b) => a.from - b.from).map(x => {
+    const n = x.to - x.from;
+    return `<article class="stay-card glass">
+      <div class="stay-top"><span class="chip good">${t('Booked')}</span><span class="chip">${esc(day(nightTs(x.from), 'Asia/Shanghai'))} → ${esc(day(nightTs(x.to), 'Asia/Shanghai'))}</span><span class="chip">${t(n === 1 ? '1 night' : '{n} nights', { n })}</span><span class="chip out">${t(CITY_N[x.city])}</span></div>
+      <h3>${esc(x.name)}</h3>
+      ${x.addr ? `<div class="spot-addr">${pinIcon}<span lang="${stayLang(x.city) === 'zh' ? 'zh-CN' : 'vi'}">${esc(x.addr)}</span></div>` : `<div class="spot-addr muted">${pinIcon}<span>${t('No address yet. Add it so you can show it to a driver.')}</span></div>`}
+      ${x.cancel ? `<div class="tip">${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'}<span>${t('Free cancellation until {when}', { when: esc(t(x.cancel)) })}</span></div>` : ''}
+      ${x.ref || x.price || x.note ? `<dl class="dl">${x.ref ? `<dt>${t('Booking ref')}</dt><dd class="mono">${esc(x.ref)}</dd>` : ''}${x.price ? `<dt>${t('Price')}</dt><dd>${esc(x.price)}</dd>` : ''}${x.note ? `<dt>${t('Notes')}</dt><dd>${esc(x.note)}</dd>` : ''}</dl>` : ''}
+      <div class="acts"><button class="sbtn primary" type="button" data-stay-edit="${esc(x.id)}">${t('Edit')}</button>${x.addr ? `<button class="sbtn" type="button" data-stay-show="${esc(x.id)}">${t('Show to driver')}</button>` : ''}<a class="sbtn" href="${stayMap(x)}" target="_blank" rel="noopener">${t(stayLang(x.city) === 'zh' ? 'Open in Amap' : 'Open in Google Maps')}</a></div>
+    </article>`;
+  }).join('') + `<button type="button" class="stay-add" data-stay-add="${open[0]?.d || 18}">
+      <span class="plus" aria-hidden="true">+</span><span><b>${t('Add a stay')}</b><small>${open.length ? t('Still open: {days}', { days: open.map(n => F('Asia/Shanghai', { weekday:'short', day:'numeric' }).format(nightTs(n.d))).join(', ') }) : t('Every Shanghai night is booked.')}</small></span>
+    </button>`;
+}
+const stayDlg = $('#stayDlg'); let editing = null, delArmed = false;
+function fillDates(from, to) {
+  $('#sFrom').innerHTML = NIGHT_BASE.map(n => `<option value="${n.d}"${n.d === from ? ' selected' : ''}>${esc(day(nightTs(n.d), 'Asia/Shanghai'))}</option>`).join('');
+  $('#sTo').innerHTML = NIGHT_BASE.map(n => n.d + 1).filter(d => d > from).map(d => `<option value="${d}"${d === to ? ' selected' : ''}>${esc(day(nightTs(d), 'Asia/Shanghai'))}</option>`).join('');
+}
+function fillCities(from, city) {
+  const ok = citiesForNight(from);
+  $('#sCity').innerHTML = ok.map(c => `<option value="${c}"${c === city ? ' selected' : ''}>${esc(t(CITY_N[c]))}</option>`).join('');
+}
+function openStay(id, preset = {}) {
+  const x = id ? myStays.find(s => s.id === id) : null;
+  editing = x ? x.id : null; delArmed = false;
+  const v = x || { name:'', city:'sh', from:18, to:19, addr:'', ref:'', cancel:'', price:'', note:'', ...preset };
+  if (!x && preset.from && !preset.to) v.to = preset.from + 1;
+  if (!citiesForNight(v.from).includes(v.city)) v.city = citiesForNight(v.from)[0];
+  $('#stayDlgT').textContent = t(x ? 'Edit stay' : 'Add a stay');
+  $('#sName').value = v.name; $('#sAddr').value = v.addr; $('#sRef').value = v.ref; $('#sCancel').value = v.cancel; $('#sPrice').value = v.price; $('#sNote').value = v.note;
+  fillDates(v.from, v.to); fillCities(v.from, v.city);
+  $('#sDel').hidden = !x; $('#sDel').textContent = t('Delete stay'); $('#sErr').textContent = '';
+  if (stayDlg.showModal) stayDlg.showModal(); else stayDlg.setAttribute('open', '');
+  setTimeout(() => (x ? $('#sName') : $('#sName')).focus(), 30);
+}
+function closeStay() { if (stayDlg.close) stayDlg.close(); else stayDlg.removeAttribute('open'); }
+$('#sFrom').addEventListener('change', () => { const f = +$('#sFrom').value, to = Math.max(f + 1, +$('#sTo').value); fillDates(f, to); fillCities(f, $('#sCity').value); });
+$('#sCancelBtn').addEventListener('click', closeStay);
+$('#sDel').addEventListener('click', () => {
+  if (!delArmed) { delArmed = true; $('#sDel').textContent = t('Tap again to delete'); return; }
+  const x = myStays.find(s => s.id === editing); myStays = myStays.filter(s => s.id !== editing);
+  saveStays(); closeStay(); toast(t('Deleted {name}', { name: x?.name || '' }));
+});
+$('#stayForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = { name: $('#sName').value.trim(), city: $('#sCity').value, from: +$('#sFrom').value, to: +$('#sTo').value, addr: $('#sAddr').value.trim(), ref: $('#sRef').value.trim(), cancel: $('#sCancel').value.trim(), price: $('#sPrice').value.trim(), note: $('#sNote').value.trim() };
+  const err = m => { $('#sErr').textContent = m; };
+  if (!v.name) { err(t('Type the name of the place you’re staying.')); $('#sName').focus(); return; }
+  if (!(v.to > v.from)) { err(t('Check-out must be after check-in.')); $('#sTo').focus(); return; }
+  for (let d = v.from; d < v.to; d++) if (!citiesForNight(d).includes(v.city)) { err(t('On the night of {day} you are in {city}. Split this into two stays.', { day: day(nightTs(d), 'Asia/Shanghai'), city: t(CITY_N[citiesForNight(d)[0]]) })); $('#sTo').focus(); return; }
+  const clash = myStays.find(s => s.id !== editing && s.from < v.to && v.from < s.to);
+  if (clash) { err(t('These dates overlap with {name} ({a}–{b} Feb). Change the dates, or edit that stay first.', { name: clash.name, a: clash.from, b: clash.to })); $('#sFrom').focus(); return; }
+  if (editing) Object.assign(myStays.find(s => s.id === editing), v); else myStays.push({ id: 's' + Date.now().toString(36), ...v });
+  if (v.addr) { const k = stayLang(v.city); addr[k] = { name: v.name, text: v.addr }; store.set('addr', addr); if (lang === k) renderAddr(); }
+  saveStays(); closeStay();
+  toast(t(editing ? 'Saved {name}' : 'Added {name}', { name: v.name }) + (v.addr ? ' · ' + t('Its address is on the Say tab too.') : ''));
+});
+function saveStays() { store.set('stays', myStays); rebuildNights(); renderJourney(); renderDays(); updateReadout(); }
+document.addEventListener('click', e => {
+  const ed = e.target.closest('[data-stay-edit]'); if (ed) { openStay(ed.dataset.stayEdit); return; }
+  const ad = e.target.closest('[data-stay-add]'); if (ad) { openStay(null, { from: +ad.dataset.stayAdd }); return; }
+  const ni = e.target.closest('[data-night]');
+  if (ni) { const n = NIGHTS.find(x => x.d === +ni.dataset.night); n.stay ? openStay(n.stay.id) : openStay(null, { from: n.d, city: n.city }); return; }
+  const sh = e.target.closest('[data-stay-show]');
+  if (sh) { const x = myStays.find(s => s.id === sh.dataset.stayShow), k = stayLang(x.city); openShow(PHRASES[k].lead + x.addr, x.name, t('Please take me to this address.'), k); }
+});
 
 /* ---------------- Show & Say ---------------- */
 const PHRASES = {
@@ -889,7 +1006,7 @@ $('#rateBtn').addEventListener('click', async () => {
 
 /* ---------------- Prep ---------------- */
 const PREP = [
-  { id:'book-sh', t:'Book a place in Shanghai for 18–22 Feb', d:'Four nights are still open before the Mido Homestay stay starts on the 22nd.' },
+  { id:'book-sh', t:'Book a place in Shanghai for 18–22 Feb', d:'Four nights are still open before the Mido Homestay stay starts on the 22nd. Tap a night on the Trip tab to add it once booked.' },
   { id:'mido', t:'Keep or cancel Shanghai Mido Resort Homestay', d:'', deadline: MIDO_DEADLINE },
   { id:'sgn', t:'Decide how to spend the Ho Chi Minh City overnight', d:'You land at 21:00 and fly at 09:20. Stay airside, or book a room near Tan Son Nhat.' },
   { id:'han', t:'Decide how to spend the Hanoi overnight', d:'You land at 18:05 and fly at 14:50 the next day. That is enough time for an evening in the Old Quarter.' },

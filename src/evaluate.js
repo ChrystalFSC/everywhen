@@ -145,7 +145,7 @@ function dayNotes(d, outdoor) {
   const n = [];
   if (d === 20) n.push(t('Sat 20 Feb is the Lantern Festival, so expect big crowds everywhere.'));
   else if (d === 21) n.push(t('Sunday: popular sights are much busier at weekends.'));
-  if (d === 22) n.push(t('You move into the Mido Homestay that day, so allow time for check-in.'));
+  myStays.filter(x => x.from === d).forEach(x => n.push(t('You check in at {name} that day, so allow time for it.', { name: x.name })));
   const w = dayWx('sh', d); if (outdoor && w.live && w.p >= 60) n.push(t('Rain is likely that day ({p}%).', { p: w.p }));
   return n;
 }
@@ -195,7 +195,7 @@ function assess(m, pref) {
   if (each <= 160 && need <= 13) return { ...base, level:'long', day, need, trip:true, reasons: [t('{each} each way by {mode}, so about {round} of travel in one day.', { each: fmtMins(each), mode: t(MODE[p.mode]), round: fmtHrs(Math.round(round * 2) / 2) }) + via, t('Leave by about 07:30 and expect to be back late.'), ...extra, ...dayNotes(day, true)] };
   if (each <= 300) {
     const open = NIGHTS.filter(n => n.kind === 'open').map(n => n.d);
-    return { ...base, level:'overnight', day, need, trip:true, reasons: [t('{each} each way by {mode}. That is too much travel for one day.', { each: fmtMins(each), mode: t(MODE[p.mode]) }), open.length ? t('You still have {n} unbooked nights in Shanghai (18–21 Feb), so you could spend one of them there instead.', { n: open.length }) : '', ...extra].filter(Boolean) };
+    return { ...base, level:'overnight', day, need, trip:true, reasons: [t('{each} each way by {mode}. That is too much travel for one day.', { each: fmtMins(each), mode: t(MODE[p.mode]) }), open.length ? t('You still have {n} unbooked nights ({days} Feb), so you could spend one of them there instead.', { n: open.length, days: open.join(', ') }) : '', ...extra].filter(Boolean) };
   }
   if (p.dist > 1500) return { ...base, level:'no', need, reasons: [t('About {km} from Shanghai, roughly {each} each way by air including airports.', { km: fmtKm(p.dist), each: fmtMins(each) }), t('This belongs to a different trip.')] };
   return { ...base, level:'no', need, reasons: [t('About {each} each way by {mode}.', { each: fmtMins(each), mode: t(MODE[p.mode]) }), t('It would take at least 2 of your 6 Shanghai days just to get there and back.')], instead: t('Closer alternatives with a similar feel: Suzhou, Hangzhou or Nanjing.') };
@@ -218,7 +218,7 @@ let sampleFn = null;
 (window.claude?.use ? window.claude.use('sample') : Promise.resolve(null)).then(s => { sampleFn = s; if (s) $$('.v-claude').forEach(b => b.hidden = false); }).catch(() => {});
 function tripContext() {
   const days = DAYS.map(x => `${dayLabel(x.d)}: ${x.cities.map(c => CITYN[c]).join(' → ')}, ${(+x.free.toFixed(1))} h free, ${Math.max(0, +freeLeft(x.d).toFixed(1))} h still unplanned${x.note ? ' (' + x.note + ')' : ''}`).join('\n');
-  return `Trip (2027): fly Kuala Lumpur → Ho Chi Minh City 17 Feb (land 21:00, overnight, fly on at 09:20), Shanghai 18 Feb 14:15 → 24 Feb 15:25 (Lantern Festival 20 Feb; moves into a homestay 22 Feb; 4 nights 18–21 Feb not booked yet), Hanoi 24 Feb 18:05 → 25 Feb 14:50 (must be back at the airport 12:20), home to Kuala Lumpur. Traveller holds a Malaysian passport, uses public transport and DiDi/Grab, pace about ${PACE[plan.prefs.pace]} h of sightseeing a day.\nDays:\n${days}`;
+  return `Trip (2027): fly Kuala Lumpur → Ho Chi Minh City 17 Feb (land 21:00, overnight, fly on at 09:20), Shanghai 18 Feb 14:15 → 24 Feb 15:25 (Lantern Festival 20 Feb; ${myStays.map(x => `staying at ${x.name} ${x.from}–${x.to} Feb`).join('; ') || 'no hotels booked'}; nights not booked yet: ${NIGHTS.filter(n => n.kind === 'open').map(n => n.d + ' Feb').join(', ') || 'none'}), Hanoi 24 Feb 18:05 → 25 Feb 14:50 (must be back at the airport 12:20), home to Kuala Lumpur. Traveller holds a Malaysian passport, uses public transport and DiDi/Grab, pace about ${PACE[plan.prefs.pace]} h of sightseeing a day.\nDays:\n${days}`;
 }
 async function askClaude(q, pref, host, hostId) {
   if (!sampleFn) throw { code:'not_available' };
@@ -317,9 +317,8 @@ async function useAsHotel(hostId) {
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=zh-CN&lat=${p.ll[0]}&lon=${p.ll[1]}`);
     const j = await r.json(); text = (j.display_name || '').split(', ').reverse().filter(s => !/^\d{6}$/.test(s) && s !== '中国').join('');
   } catch {}
-  addr.zh = { name, text: text || name }; store.set('addr', addr);
-  if (lang === 'zh') renderAddr();
-  toast(t('Saved as your Shanghai hotel. Check the address on the Say tab.'));
+  const free = NIGHTS.find(n => n.kind === 'open');
+  openStay(null, { name, addr: text, city: 'sh', from: free ? free.d : 18 });
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-vadd]'); if (b) { addVerdict(b.dataset.vadd, !!b.dataset.anyway); return; }

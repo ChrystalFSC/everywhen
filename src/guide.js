@@ -23,8 +23,7 @@ const DAYS = [
   { d:17, slots:[['sgn','evening',.75]], fixed:[['VN678','KUL 19:50 → SGN 21:00']] },
   { d:18, slots:[['sh','evening',4]], fixed:[['VN524','SGN 09:20 → PVG 14:15']] },
   { d:19 }, { d:20, note:'Lantern Festival: lanterns and big crowds, especially around Yu Garden.' },
-  { d:21, note:'Mido Homestay free cancellation ends at 18:00 today.' },
-  { d:22, note:'Check in at Shanghai Mido Resort Homestay.' }, { d:23 },
+  { d:21 }, { d:22 }, { d:23 },
   { d:24, slots:[['sh','morning',2.5],['han','evening',3]], fixed:[['VN533','PVG 15:25 → HAN 18:05']], note:'Leave for Pudong Airport by about 12:00.' },
   { d:25, slots:[['han','morning',2.75]], fixed:[['VN681','HAN 14:50 → KUL 19:10']], note:'Be back at Noi Bai by 12:20.' }
 ];
@@ -117,8 +116,17 @@ function addOptions(x) {
   const inPlan = new Set(Object.values(plan.items).flat());
   return x.cities.map(c => {
     const list = ITEMS.filter(i => i.c === c && !inPlan.has(i.id)).sort((a, b) => b.tier - a.tier);
-    return list.length ? `<optgroup label="${esc(cityName(c))}">${list.map(i => `<option value="${i.id}">${i.tier === 3 ? '★ ' : ''}${esc(nameOf(i))}${i.k === 'food' ? ' · ' + t('Food') : ''} · ${fmtHrs(i.hrs)}</option>`).join('')}</optgroup>` : '';
+    return list.length ? `<optgroup label="${esc(cityName(c))}">${list.map(i => `<option value="${i.id}">${i.tier === 3 ? '★ ' : ''}${esc(nameOf(i))}${i.k === 'food' ? ' · ' + t('Food') : i.k === 'buy' ? ' · ' + t('Souvenirs') : ''} · ${fmtHrs(i.hrs)}</option>`).join('')}</optgroup>` : '';
   }).join('');
+}
+function stayNotes(d) {
+  const n = [];
+  myStays.forEach(x => {
+    if (x.from === d && d !== 17) n.push(t('Check in at {name}.', { name: x.name }));
+    if (x.to === d && d !== 25 && !myStays.some(y => y.from === d)) n.push(t('Check out of {name}. Bring your bags or ask the hotel to hold them.', { name: x.name }));
+  });
+  if (d === 21 && myStays.some(x => x.id === 'mido')) n.push(t('Mido Homestay free cancellation ends at 18:00 today.'));
+  return n;
 }
 function renderDays() {
   const host = $('#days'); if (!host) return;
@@ -127,7 +135,7 @@ function renderDays() {
     const items = plan.items[x.d] || [], hrs = items.reduce((a, id) => a + (getItem(id)?.hrs || 0), 0); total += items.length;
     const cities = x.cities, nk = cities[cities.length - 1], w = dayWx(nk, x.d);
     const night = NIGHTS.find(n => n.d === x.d);
-    const nightChip = !night ? '<span class="chip ret">Home tonight</span>' : night.kind === 'booked' ? '<span class="chip good">Night: Mido Homestay</span>' : night.kind === 'open' ? '<span class="chip warn">Night: not booked</span>' : `<span class="chip">Night: transfer</span>`;
+    const nightChip = !night ? '<span class="chip ret">Home tonight</span>' : night.kind === 'booked' ? `<span class="chip good">${t('Night: {n}', { n: esc(night.short) })}</span>` : night.kind === 'open' ? '<span class="chip warn">Night: not booked</span>' : `<span class="chip">Night: transfer</span>`;
     const over = hrs > x.free + .25, b = plan.base[x.d];
     const baseSel = x.slots ? `<span>${cities.map(cityName).join(' → ')}</span>` : `<label class="sr" for="base-${x.d}">${t('Where on {day}', { day: dayLabel(x.d) })}</label><select class="sel base" id="base-${x.d}" data-base="${x.d}">${['sh','sz','hz', ...Object.keys(plan.extra || {})].map(c => `<option value="${c}"${b === c ? ' selected' : ''}>${c === 'sh' ? t('Shanghai') : t('Day trip: {city}', { city: cityName(c) })}</option>`).join('')}</select>`;
     const trip = !x.slots && CITIES[b].kind === 'daytrip';
@@ -141,7 +149,7 @@ function renderDays() {
         ${nightChip}
       </div>
       <div class="day-b">
-        ${x.note ? `<div class="dnote">${esc(t(x.note))}</div>` : ''}
+        ${[x.note && t(x.note), ...stayNotes(x.d)].filter(Boolean).map(n => `<div class="dnote">${esc(n)}</div>`).join('')}
         ${rainy ? `<div class="dnote rain">${t('Rain is likely ({p}%).', { p: w.p })}${indoor.length ? ' ' + esc(t('Indoor ideas: {list}.', { list: indoor.map(n => t(n)).join(LANG === 'zh' ? '、' : ', ') })) : ''}</div>` : ''}
         ${(x.fixed || []).map(([no, r]) => `<div class="fixed">${planeIcon}<b>${no}</b><span>${r}</span></div>`).join('')}
         ${trip ? `<div class="fixed train">${trainIcon}<span><b>${esc(cityName(b))}</b> · ${esc(t(CITIES[b].train))} ${esc(t(CITIES[b].leave))} ${t('Book on Trip.com or 12306 and bring your passport to board.')}</span></div>` : ''}
@@ -149,7 +157,7 @@ function renderDays() {
           const away = !it.custom && !cities.includes(it.c);
           return `<div class="item${it.custom ? ' own' : ''}">
             ${PHOTOS[it.id] ? `<img class="thumb" src="${PHOTOS[it.id].src}" alt="" loading="lazy">` : `<span class="thumb ph" aria-hidden="true">${esc((it.l || it.n).slice(0, 2))}</span>`}
-            <div class="imain"><div class="iname">${esc(it.custom ? it.n : nameOf(it))}${it.tier === 3 ? ' <span class="star" title="Top pick">★</span>' : ''}</div><div class="isub">${t(it.custom ? 'Your stop' : (it.k === 'food' ? 'Food' : WHEN_LABEL[it.when]))} · ${t('about {h}', { h: fmtHrs(it.hrs) })}${away ? ` · <span style="color:var(--warn)">${t('not in {city} this day', { city: esc(cityName(it.c)) })}</span>` : ''}</div></div>
+            <div class="imain"><div class="iname">${esc(it.custom ? it.n : nameOf(it))}${it.tier === 3 ? ' <span class="star" title="Top pick">★</span>' : ''}</div><div class="isub">${t(it.custom ? 'Your stop' : (it.k === 'food' ? 'Food' : it.k === 'buy' ? 'Souvenirs' : WHEN_LABEL[it.when]))} · ${t('about {h}', { h: fmtHrs(it.hrs) })}${away ? ` · <span style="color:var(--warn)">${t('not in {city} this day', { city: esc(cityName(it.c)) })}</span>` : ''}</div></div>
             <div class="ictl">
               <button class="ib" type="button" data-act="up" data-d="${x.d}" data-i="${i}" aria-label="${t('Move {n} earlier', { n: esc(it.n) })}"${i ? '' : ' disabled'}>↑</button>
               <button class="ib" type="button" data-act="down" data-d="${x.d}" data-i="${i}" aria-label="${t('Move {n} later', { n: esc(it.n) })}"${i < items.length - 1 ? '' : ' disabled'}>↓</button>
@@ -233,11 +241,11 @@ function dayChoices(city) {
 }
 /* Food spots: local price with a ringgit estimate, a map link (Amap in China, where Google is blocked; Google Maps in Vietnam) */
 const CUR = c => CITIES[c].lang === 'zh' ? 'CNY' : 'VND';
-function priceText(c, [lo, hi]) {
+function priceText(c, [lo, hi], unit = 'per person') {
   const cur = CUR(c), r = +rates[cur], k = n => n >= 1000 ? Math.round(n / 1000) + 'k' : n;
   const local = cur === 'CNY' ? `¥${lo}–${hi}` : `${k(lo)}–${k(hi)} ₫`;
   const rm = r > 0 ? ` · ≈ RM ${Math.round(lo / r)}–${Math.round(hi / r)}` : '';
-  return t('{p} per person', { p: local + rm });
+  return t('{p} ' + unit, { p: local + rm });
 }
 function mapUrl(c, s) {
   if (CITIES[c].lang === 'zh') return `https://uri.amap.com/search?keyword=${encodeURIComponent(s.l)}&city=${encodeURIComponent(CITIES[c].l)}&callnative=1`;
@@ -245,19 +253,19 @@ function mapUrl(c, s) {
 }
 function spotsHtml(it) {
   const zh = CITIES[it.c].lang === 'zh', pin = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
-  return `<div class="spots"><div class="spots-h">${t('Where to eat')}</div><ul>${it.spots.map((s, i) => {
+  return `<div class="spots"><div class="spots-h">${t(it.k === 'buy' ? 'Where to buy' : 'Where to eat')}</div><ul>${it.spots.map((s, i) => {
     const name = LANG === 'zh' && zh ? s.l : s.n, sub = zh && LANG !== 'zh' ? s.l : '';
     const addr = LANG === 'zh' && zh ? s.al : t(s.a);
     return `<li class="spot">
       <div class="spot-top"><b>${esc(name)}</b>${sub ? `<span class="local" lang="zh-CN">${esc(sub)}</span>` : ''}</div>
       <div class="spot-addr">${pin}<span>${esc(addr)}</span></div>
-      <div class="spot-meta"><span class="spot-price">${priceText(it.c, s.p)}</span>${s.note ? `<span class="spot-note">${esc(t(s.note))}</span>` : ''}</div>
+      <div class="spot-meta"><span class="spot-price">${priceText(it.c, s.p, it.unit)}</span>${s.note ? `<span class="spot-note">${esc(t(s.note))}</span>` : ''}</div>
       <div class="spot-acts"><a class="sbtn" href="${mapUrl(it.c, s)}" target="_blank" rel="noopener">${t(zh ? 'Open in Amap' : 'Open in Google Maps')}</a>${/\d|Rd|St|Lane/.test(s.a) ? `<button class="sbtn" type="button" data-spot="${it.id}:${i}">${t('Show to driver')}</button>` : ''}</div>
     </li>`; }).join('')}</ul><p class="spots-foot">${t('Prices are estimates. Rates from the Money tab.')}</p></div>`;
 }
 function renderExplore() {
   const kind = xKind;
-  $('#xContext').innerHTML = kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
+  $('#xContext').innerHTML = kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
   $('#xRank').hidden = kind === 'stay' || kind === 'skip';
   const g = $('#xGrid');
   if (kind === 'stay') {
@@ -279,15 +287,15 @@ function renderExplore() {
     const lng = CITIES[it.c].lang === 'zh' ? 'zh-CN' : 'vi';
     return `<article class="xcard">${cover(it)}<div class="xbody">
       <div><h3>${esc(nameOf(it))}</h3>${LANG === 'zh' && hasCJK(it.l) ? `<div class="local">${esc(it.n)}</div>` : it.l !== it.n ? `<div class="local" lang="${lng}">${esc(it.l)}</div>` : ''}</div>
-      <div class="chips">${it.k === 'place' ? `<span class="chip out">${t(WHEN_LABEL[it.when])}</span><span class="chip">${fmtHrs(it.hrs)}</span>` : it.spots?.length ? `<span class="chip gold">${priceText(it.c, [Math.min(...it.spots.map(s => s.p[0])), Math.max(...it.spots.map(s => s.p[1]))])}</span>` : ''}${on.length ? `<span class="chip good">${t('In plan · {days}', { days: on.join(', ') })}</span>` : ''}</div>
+      <div class="chips">${it.k === 'place' ? `<span class="chip out">${t(WHEN_LABEL[it.when])}</span><span class="chip">${fmtHrs(it.hrs)}</span>` : it.spots?.length ? `<span class="chip gold">${priceText(it.c, [Math.min(...it.spots.map(s => s.p[0])), Math.max(...it.spots.map(s => s.p[1]))], it.unit)}</span>` : ''}${on.length ? `<span class="chip good">${t('In plan · {days}', { days: on.join(', ') })}</span>` : ''}</div>
       <p class="why">${esc(t(it.why))}</p>
       <p>${esc(t(it.d))}</p>
       ${it.tip ? `<div class="tip">${tipIcon}<span>${esc(t(it.tip))}</span></div>` : ''}
-      ${it.k === 'food' && it.spots?.length ? spotsHtml(it) : `<div class="how">${esc(it.k === 'food' ? t('Try: {w}', { w: t(it.where) }) : t(it.how))}</div>`}
+      ${it.k !== 'place' && it.spots?.length ? spotsHtml(it) : `<div class="how">${esc(it.k === 'food' ? t('Try: {w}', { w: t(it.where) }) : t(it.how))}</div>`}
       <div class="acts">
         <select class="sel" id="add-${it.id}" aria-label="${t('Day to add {n} to', { n: esc(nameOf(it)) })}">${dayChoices(it.c)}</select>
         <button class="sbtn primary" type="button" data-add="${it.id}">Add to plan</button>
-        <button class="sbtn" type="button" data-show="${it.id}">${it.k === 'food' ? 'Show to order' : 'Show to driver'}</button>
+        <button class="sbtn" type="button" data-show="${it.id}">${it.k === 'food' ? 'Show to order' : it.k === 'buy' ? 'Show to shop' : 'Show to driver'}</button>
         ${CITIES[it.c].lang === 'zh' ? `<button class="sbtn" type="button" data-copy="${it.id}" title="Copy the Chinese name to check live reviews">Reviews</button>` : ''}
       </div>
     </div></article>`;
@@ -311,8 +319,8 @@ $('#xGrid').addEventListener('click', async e => {
   }
   if (s) {
     const it = BY[s.dataset.show], lg = CITIES[it.c].lang === 'zh' ? 'zh' : 'vi';
-    const text = it.k === 'food' ? (lg === 'zh' ? '我想要这个：' : 'Cho tôi món này: ') + it.l : (lg === 'zh' ? '请带我去：' : 'Làm ơn đưa tôi đến: ') + it.l;
-    openShow(text, '', t(it.k === 'food' ? 'I’d like this: {n}' : 'Please take me to: {n}', { n: nameOf(it) }), lg);
+    const text = it.k === 'food' ? (lg === 'zh' ? '我想要这个：' : 'Cho tôi món này: ') + it.l : it.k === 'buy' ? (lg === 'zh' ? '我想买这个：' : 'Tôi muốn mua cái này: ') + it.l : (lg === 'zh' ? '请带我去：' : 'Làm ơn đưa tôi đến: ') + it.l;
+    openShow(text, '', t(it.k === 'food' ? 'I’d like this: {n}' : it.k === 'buy' ? 'I’d like to buy this: {n}' : 'Please take me to: {n}', { n: nameOf(it) }), lg);
   }
   if (c) {
     const it = BY[c.dataset.copy];
