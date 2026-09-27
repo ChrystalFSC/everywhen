@@ -13,7 +13,11 @@ const QUERIES = {
   'f-pianerchuan': 'Pianerchuan', 'trainst': 'Hanoi train street', 'buivien': 'Bui Vien street', 'f-phosgn': 'Pho Saigon bowl',
   'stay-sh-0': 'Nanjing Road East night', 'stay-sh-1': "People's Square Shanghai", 'stay-sh-2': "Jing'an Shanghai skyline", 'stay-sh-3': 'Former French Concession Shanghai street', 'stay-sh-4': 'Lujiazui skyline night',
   'stay-sz-0': 'Pingjiang Road canal', 'stay-sz-1': 'Suzhou railway station', 'stay-hz-0': 'West Lake Hangzhou sunrise', 'stay-hz-1': 'Hangzhou East railway station',
-  'stay-han-0': 'Hanoi Old Quarter street', 'stay-han-1': 'Noi Bai International Airport terminal', 'stay-sgn-0': 'Tan Son Nhat International Airport', 'stay-sgn-1': 'Ho Chi Minh City skyline night'
+  'stay-han-0': 'Hanoi Old Quarter street', 'stay-han-1': 'Noi Bai International Airport terminal', 'stay-sgn-0': 'Tan Son Nhat International Airport', 'stay-sgn-1': 'Ho Chi Minh City skyline night',
+  'b-warrior': 'Huili shoes', 'b-lacquer': 'lacquerware Vietnam', 'puppets': 'water puppet Hanoi', 'f-congyoubing': 'scallion pancakes street food China',
+  'b-tailor': 'Shiliupu fabric market', 'b-tea-sh': 'Chinese tea shop tea leaves', 'b-caizhizhai': 'Caizhizhai Suzhou', 'b-silk-hz': 'silk scarves shop',
+  'b-fan-hz': 'Chinese folding fan painted', 'b-silk-han': 'Hang Gai street Hanoi', 'f-paigu': 'pork chop rice cake', 'f-catear': 'Maoerduo',
+  'f-phocuon': 'phở cuốn', 'f-kem': 'Kem Trang Tien', 'f-oc': 'grilled scallops Vietnam street food'
 };
 const cand = path.join(root, 'images/cand'), credPath = path.join(root, 'data/photos.json');
 const [, , cmd, id, n] = process.argv;
