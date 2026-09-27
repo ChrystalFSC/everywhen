@@ -843,3 +843,19 @@ button.night.open:hover{border-color:rgba(232,178,26,.6)}
 .mine-note textarea{min-height:54px;font-size:14px}
 .mine-empty{grid-column:1/-1;padding:22px;border-radius:20px;display:grid;gap:10px;justify-items:start}
 .mine-empty p{color:var(--muted);font-size:14px;margin:0}
+
+/* Shared card details: About (Wikipedia), notes, restaurant hours */
+.about,.notes{border-radius:12px;background:rgba(139,108,240,.05);border:1px solid var(--line)}
+.about summary,.notes summary{cursor:pointer;list-style:none;padding:9px 12px;font:700 11px/1.2 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--out);display:flex;align-items:center;gap:8px}
+.about summary::-webkit-details-marker,.notes summary::-webkit-details-marker{display:none}
+.about summary::after,.notes summary::after{content:"+";margin-left:auto;font-size:15px;line-height:1}
+.about[open] summary::after,.notes[open] summary::after{content:"–"}
+.about p{margin:0;padding:0 12px 11px;font-size:13px;line-height:1.55;color:var(--ink);opacity:1}
+.about .src{color:var(--out);font-size:12px}
+.notes textarea{display:block;width:calc(100% - 20px);margin:0 10px 10px;min-height:58px;padding:10px 12px;border-radius:10px;border:1px solid var(--line-2);background:#fff;font:500 14px/1.45 var(--f-sans);resize:vertical}
+.notes textarea:focus{outline:none;border-color:var(--out);box-shadow:0 0 0 3px var(--out-soft)}
+.spot-extra{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted)}
+.spot-extra span{display:inline-flex;gap:5px;align-items:center}
+.spot-extra svg{width:13px;height:13px;color:var(--out)}
+.spot-extra a{color:var(--out)}
+.xcard .dl a{color:var(--out)}

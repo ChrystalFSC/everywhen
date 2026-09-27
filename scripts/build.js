@@ -29,6 +29,7 @@ src = inject(src, '__ZH__', JSON.stringify(zh));
 src = inject(src, '/* __TRANSLATE__ */', read('src/translate.js'));
 src = inject(src, '__PHOTOS__', read('data/photos.json').trim());
 src = inject(src, '__COORDS__', read('data/coords.json').trim());
+src = inject(src, '__DETAILS__', fs.existsSync(path.join(root, 'data/details.json')) ? read('data/details.json').trim() : '{}');
 src = inject(src, '__GRID__', read('data/land-grid.json').trim());
 if (/__[A-Z_]+__/.test(src.replace(/__proto__/g, ''))) throw new Error('Unreplaced marker: ' + src.match(/__[A-Z_]+__/)[0]);
 

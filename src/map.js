@@ -37,29 +37,29 @@ function hotelMarker(x, layer) {
 let xMap = null, xLayer = null, xMarkers = {};
 function renderExploreMap(list, kind) {
   const wrap = $('#xMapWrap'); if (!wrap) return;
-  const show = HAS_MAP && (kind === 'place' || kind === 'food' || kind === 'buy' || (kind === 'mine' && list.some(it => it.ll)));
+  const show = HAS_MAP && (kind === 'place' || kind === 'food' || kind === 'buy') && list.length > 0;
   wrap.hidden = !show; if (!show || wrap.offsetParent === null) return;
   if (!xMap) { xMap = baseMap($('#xMap')); xLayer = L.layerGroup().addTo(xMap); }
   xMap.invalidateSize();
   xLayer.clearLayers(); xMarkers = {};
   const planned = new Set(Object.values(plan.items).flat()), pts = [];
   list.forEach((it, i) => {
-    const spots = kind === 'mine' ? [[it.ll, null]] : kind === 'place' ? [[COORDS[it.id], null]] : (it.spots || []).map((s, k) => [spotLL(it, k), s]);
+    const spots = it.custom ? [[it.ll, null]] : kind === 'place' ? [[COORDS[it.id], null]] : (it.spots || []).map((s, k) => [spotLL(it, k), s]);
     spots.filter(([ll]) => ll).forEach(([ll, s], j) => {
-      const mk = L.marker(ll, { icon: mkPin(i + 1, `${kind === 'mine' ? 'mine' : 't' + it.tier}${planned.has(it.id) ? ' planned' : ''}${j ? ' alt' : ''}`), title: `${i + 1}. ${kind === 'mine' ? it.n : nameOf(it)}`, keyboard: true, riseOnHover: true }).addTo(xLayer);
-      const nm = kind === 'mine' ? (LANG === 'zh' && it.l && hasCJK(it.l) ? it.l : it.n) : nameOf(it), ic = kind === 'mine' ? MINE_CITY(it.c) : it.c;
-      const sub = kind === 'mine' ? esc(it.info?.kind ? kindLabel(it.info.kind) : t('Your place')) + ' · ' + fmtHrs(it.hrs || 1.5) : s ? `${esc(LANG === 'zh' && it.c !== 'han' && it.c !== 'sgn' ? s.l : s.n)} · ${priceText(it.c, s.p, it.unit)}` : esc(t(WHEN_LABEL[it.when])) + ' · ' + fmtHrs(it.hrs);
+      const mk = L.marker(ll, { icon: mkPin(i + 1, `${it.custom ? 'mine' : 't' + it.tier}${planned.has(it.id) ? ' planned' : ''}${j ? ' alt' : ''}`), title: `${i + 1}. ${it.custom ? it.n : nameOf(it)}`, keyboard: true, riseOnHover: true }).addTo(xLayer);
+      const nm = it.custom ? (LANG === 'zh' && it.l && hasCJK(it.l) ? it.l : it.n) : nameOf(it), ic = it.custom ? MINE_CITY(it.c) : it.c;
+      const sub = it.custom ? esc(it.info?.kind ? kindLabel(it.info.kind) : t('Your place')) + ' · ' + fmtHrs(it.hrs || 1.5) : s ? `${esc(LANG === 'zh' && it.c !== 'han' && it.c !== 'sgn' ? s.l : s.n)} · ${priceText(it.c, s.p, it.unit)}` : esc(t(WHEN_LABEL[it.when])) + ' · ' + fmtHrs(it.hrs);
       mk.bindPopup(`<div class="pop"><b>${i + 1}. ${esc(nm)}</b><span>${sub}</span><div class="pop-acts"><button type="button" data-card="${esc(it.id)}">${t('See details')}</button><a href="${mapLink(ic, s ? s.l : (it.l || it.n), ll)}" target="_blank" rel="noopener">${t(CITIES[ic]?.lang === 'vi' ? 'Open in Google Maps' : 'Open in Amap')}</a></div></div>`);
       (xMarkers[it.id] ||= []).push(mk); pts.push(ll);
     });
   });
-  (kind === 'mine' ? myStays.filter(x => x.ll) : staysIn(xCity)).forEach(x => pts.push(hotelMarker(x, xLayer)));
+  staysIn(xCity).forEach(x => pts.push(hotelMarker(x, xLayer)));
   const [la, lo, z] = MAP_CENTRE[xCity] || MAP_CENTRE.sh;
   // Frame the main cluster; far-out picks (a water town, Disneyland) keep their pins but don't zoom the map out.
   const mid = [med(pts.map(p => p[0])), med(pts.map(p => p[1]))], core = pts.filter(p => km(p, mid) <= 9);
   const view = core.length >= 2 ? core : pts;
   if (view.length > 1) xMap.fitBounds(view, { padding: [28, 28], maxZoom: 15 }); else if (view.length) xMap.setView(view[0], 15); else xMap.setView([la, lo], z);
-  $('#xMapNote').textContent = t(kind === 'mine' ? 'Your own places. Numbers match the cards below; a green ring means it’s in your plan.' : kind === 'place' ? 'Numbers match the cards below. Gold pins are top picks; a green ring means it’s in your plan.' : 'Each pin is a recommended shop or restaurant; the number matches the card below.');
+  $('#xMapNote').textContent = t(kind === 'place' ? 'Numbers match the cards below. Gold pins are top picks; a green ring means it’s in your plan.' : 'Each pin is a recommended shop or restaurant; the number matches the card below.');
 }
 function flyTo(id) {
   const m = xMarkers[id]?.[0]; if (!m || !xMap) return;

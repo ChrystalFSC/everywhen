@@ -435,7 +435,7 @@ Type	类型
 Places	景点
 Where to stay	住哪里
 Skip these	避坑
-Sorted best first. ★ Top pick, then Worth it, then If you have time. These are our editors’ picks, not live star ratings. Tap	按推荐程度排序：★ 必去，其次是值得一去，再到有空再去。这些是编辑推荐，不是实时星级评分。点
+Sorted best first. ★ Top pick, then Worth it, then If you have time. Places you added yourself come first, marked Yours. The rest are our editors’ picks, not live star ratings. Tap	按推荐程度排序（你自己添加的地点排在最前，标有“我的”）：★ 必去，其次是值得一去，再到有空再去。这些是编辑推荐，不是实时星级评分。点
 Reviews	看评价
 to copy a place’s Chinese name for Dianping (大众点评) or Trip.com.	可复制地点的中文名，到大众点评或携程查看评价。
 Copy the Chinese name to check live reviews	复制中文名查看实时评价
@@ -1319,3 +1319,14 @@ Go to Plan	去计划页
 Tap again to remove	再点一次确认移除
 Removed {n}	已移除 {n}
 Note saved	备注已保存
+About {m} on foot from central {from}	从{from}市中心步行约{m}
+About {m} by {mode} from central {from}	从{from}市中心乘{mode}约{m}
+About	简介
+Read more	阅读全文
+Add a note	添加备注
+Open 24 hours	24小时营业
+closed	休息
+Nothing here yet.	这里还没有内容。
+Places you add in {city} with Can I go to…? on the Plan tab will appear here with their details.	在“计划”页用“我能去…吗？”添加的{city}地点，会连同详情出现在这里。
+Your own day trip to {city}. Places you add there appear here with their details.	你自己安排的{city}一日游。在那里添加的地点会连同详情出现在这里。
+Places you added yourself come first, marked Yours. The rest are our editors’ picks, not live star ratings.	你自己添加的地点排在最前，标有“我的”。其余是编辑精选，并非实时评分。

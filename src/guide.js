@@ -14,6 +14,33 @@ const cityName = c => t(CITYN[c]);
 const noteText = n => typeof n === 'string' ? t(n) : t(n.k, { city: n.city ? cityName(n.city) : '', day: n.d ? dayLabel(n.d) : '', list: (n.list || []).map(id => BY[id] ? nameOf(BY[id]) : id).join(LANG === 'zh' ? '、' : ', '), pace: n.pace ? t(n.pace[0].toUpperCase() + n.pace.slice(1)) : '', h: n.h || '' });
 const dayLabel = d => F('Asia/Shanghai', { weekday:'short', day:'numeric', month:'short' }).format(at(2027, 2, d, 12, 0, 8));
 const dayShort = d => F('Asia/Shanghai', { weekday:'short', day:'numeric' }).format(at(2027, 2, d, 12, 0, 8));
+/* Practical details for guide items, looked up at build time (scripts/fetch-details.js) so they work offline and in China. */
+const DETAILS = __DETAILS__;
+const CARD_NOTES = store.get('notes', {});
+// OpenStreetMap opening hours ("Tu-Su 09:00-17:15; Mo off") in plain words.
+function fmtHours(h) {
+  if (!h) return '';
+  const D = LANG === 'zh' ? { Mo:'周一', Tu:'周二', We:'周三', Th:'周四', Fr:'周五', Sa:'周六', Su:'周日', PH:'节假日' } : { Mo:'Mon', Tu:'Tue', We:'Wed', Th:'Thu', Fr:'Fri', Sa:'Sat', Su:'Sun', PH:'Public holidays' };
+  if (/^24\/7$/.test(h.trim())) return t('Open 24 hours');
+  return h.split(/\s*;\s*/).filter(Boolean).map(part => part
+    .replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH)\b/g, m => D[m])
+    .replace(/(\S+)-(\S+?)(?=[\s,]|$)/g, (m, a, b) => /\d/.test(a) ? m.replace('-', '–') : `${a}${LANG === 'zh' ? '至' : '–'}${b}`)
+    .replace(/\boff\b|\bclosed\b/gi, t('closed'))).join(LANG === 'zh' ? '；' : '; ');
+}
+function detailRows(rows) {
+  const r = rows.filter(x => x && x[1]);
+  return r.length ? `<dl class="dl">${r.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : '';
+}
+const webLink = w => `<a href="${esc(/^https?:/.test(w) ? w : 'https://' + w)}" target="_blank" rel="noopener">${esc(w.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').slice(0, 40))}</a>`;
+const telLink = p => `<a href="tel:${esc(p.split(/[;,]/)[0].replace(/[^\d+]/g, ''))}">${esc(p.split(/[;,]/)[0])}</a>`;
+function aboutHtml(desc, wiki, open) {
+  const text = desc?.[LANG] || desc?.en || desc?.zh, url = wiki?.[LANG] || wiki?.en || wiki?.zh;
+  if (!text) return '';
+  return `<details class="about"${open ? ' open' : ''}><summary>${t('About')}${url ? ' · Wikipedia' : ''}</summary><p>${esc(text)}${url ? ` <a class="src" href="${esc(url)}" target="_blank" rel="noopener">${t('Read more')}</a>` : ''}</p></details>`;
+}
+function notesHtml(id, val) {
+  return `<details class="notes"${val ? ' open' : ''}><summary>${t(val ? 'Your notes' : 'Add a note')}</summary><textarea id="note-${esc(id)}" data-note="${esc(id)}" aria-label="${t('Your notes')}" placeholder="${t('Tickets, who recommended it, what to order…')}">${esc(val || '')}</textarea></details>`;
+}
 function bindSeg(sel, cb) { $$(sel + ' button').forEach(b => b.addEventListener('click', () => { $$(sel + ' button').forEach(x => x.setAttribute('aria-pressed', x === b)); cb(b.dataset.v); })); }
 const tipIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/></svg>';
 
@@ -112,6 +139,7 @@ $('#planClear').addEventListener('click', e => {
 /* ---------- day cards ---------- */
 const trainIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="14" rx="4"/><path d="M5 11h14M9 21l-2 0M8 17l-2 4M16 17l2 4M9 14h.01M15 14h.01"/></svg>';
 const mapIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5z"/><path d="M9 4v13M15 6.5v13"/></svg>';
+const clockIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 const planeIcon = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
 function addOptions(x) {
   const inPlan = new Set(Object.values(plan.items).flat());
@@ -265,19 +293,20 @@ function spotsHtml(it) {
       <div class="spot-top"><b>${esc(name)}</b>${sub ? `<span class="local" lang="zh-CN">${esc(sub)}</span>` : ''}</div>
       <div class="spot-addr">${pin}<span>${esc(addr)}</span></div>
       <div class="spot-meta"><span class="spot-price">${priceText(it.c, s.p, it.unit)}</span>${s.note ? `<span class="spot-note">${esc(t(s.note))}</span>` : ''}</div>
+      ${(dx => dx.hours || dx.phone ? `<div class="spot-extra">${dx.hours ? `<span>${clockIcon}${esc(fmtHours(dx.hours))}</span>` : ''}${dx.phone ? `<span>${telLink(dx.phone)}</span>` : ''}</div>` : '')(DETAILS[`s-${it.id}-${i}`] || {})}
       <div class="spot-acts"><a class="sbtn" href="${mapUrl(it.c, s)}" target="_blank" rel="noopener">${t(zh ? 'Open in Amap' : 'Open in Google Maps')}</a>${/\d|Rd|St|Lane/.test(s.a) ? `<button class="sbtn" type="button" data-spot="${it.id}:${i}">${t('Show to driver')}</button>` : ''}</div>
     </li>`; }).join('')}</ul><p class="spots-foot">${t('Prices are estimates. Rates from the Money tab.')}</p></div>`;
 }
 function renderExplore() {
   const kind = xKind;
-  $('#xCity').hidden = kind === 'mine';
-  if (kind === 'mine') { renderMine(); return; }
-  $('#xContext').innerHTML = kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
+  syncCityButtons();
+  const own = !CTX[xCity];
+  $('#xContext').innerHTML = own ? t('Your own day trip to {city}. Places you add there appear here with their details.', { city: esc(cityName(xCity)) }) : kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
   $('#xRank').hidden = kind === 'stay' || kind === 'skip';
   const g = $('#xGrid');
   if (kind === 'stay' || kind === 'skip') renderExploreMap([], kind);
   if (kind === 'stay') {
-    g.innerHTML = STAYS[xCity].map((s, i) => `<article class="xcard">${cover({ id:`stay-${xCity}-${i}`, n:s.n, l:s.n }, 'stay')}<div class="xbody"><h3>${esc(t(s.n))}</h3><div class="chips"><span class="chip good">${t('Best for: {x}', { x: esc(t(s.best)) })}</span></div>
+    g.innerHTML = (STAYS[xCity] || []).map((s, i) => `<article class="xcard">${cover({ id:`stay-${xCity}-${i}`, n:s.n, l:s.n }, 'stay')}<div class="xbody"><h3>${esc(t(s.n))}</h3><div class="chips"><span class="chip good">${t('Best for: {x}', { x: esc(t(s.best)) })}</span></div>
       <dl class="dl"><dt>${t('Good')}</dt><dd>${esc(t(s.good))}</dd><dt>${t('Watch')}</dt><dd>${esc(t(s.watch))}</dd></dl><div class="how">${esc(t(s.how))}</div></div></article>`).join('');
     return;
   }
@@ -290,7 +319,14 @@ function renderExplore() {
   }
   const inPlan = Object.entries(plan.items);
   const list = ITEMS.filter(i => i.c === xCity && i.k === kind).map((it, ix) => ({ it, ix })).sort((a, b) => b.it.tier - a.it.tier || a.ix - b.ix).map(o => o.it);
-  g.innerHTML = list.map((it, ix) => {
+  const mine = mineList().filter(m => MINE_CITY(m.c) === xCity && mineKind(m) === kind), off = mine.length;
+  $('#xRank').hidden = !list.length;
+  if (!list.length && !mine.length) {
+    g.innerHTML = `<div class="mine-empty glass"><b>${t('Nothing here yet.')}</b><p>${t('Places you add in {city} with Can I go to…? on the Plan tab will appear here with their details.', { city: esc(cityName(xCity)) })}</p></div>`;
+    renderExploreMap([], kind); return;
+  }
+  g.innerHTML = mine.map(mineCard).join('') + list.map((it, i) => {
+    const ix = i + off, dt = DETAILS[it.id] || {};
     const pinned = kind === 'place' ? !!COORDS[it.id] : (it.spots || []).some((s, k) => spotLL(it, k));
     const on = inPlan.filter(([, ids]) => ids.includes(it.id)).map(([d]) => dayShort(+d));
     const lng = CITIES[it.c].lang === 'zh' ? 'zh-CN' : 'vi';
@@ -300,7 +336,15 @@ function renderExplore() {
       <p class="why">${esc(t(it.why))}</p>
       <p>${esc(t(it.d))}</p>
       ${it.tip ? `<div class="tip">${tipIcon}<span>${esc(t(it.tip))}</span></div>` : ''}
-      ${it.k !== 'place' && it.spots?.length ? spotsHtml(it) : `<div class="how">${esc(it.k === 'food' ? t('Try: {w}', { w: t(it.where) }) : t(it.how))}</div>`}
+      ${aboutHtml(dt.desc, dt.wiki)}
+      ${it.k === 'place' ? detailRows([
+        [t('Address'), dt.addr && `<span lang="${lng}">${esc(dt.addr)}</span>`],
+        [t('Opening hours'), dt.hours && esc(fmtHours(dt.hours))],
+        [t('Getting there'), it.how && esc(t(it.how))],
+        [t('Phone'), dt.phone && telLink(dt.phone)],
+        [t('Website'), dt.web && webLink(dt.web)]
+      ]) : it.spots?.length ? spotsHtml(it) : `<div class="how">${esc(t('Try: {w}', { w: t(it.where) }))}</div>`}
+      ${notesHtml(it.id, CARD_NOTES[it.id])}
       <div class="acts">
         <select class="sel" id="add-${it.id}" aria-label="${t('Day to add {n} to', { n: esc(nameOf(it)) })}">${dayChoices(it.c)}</select>
         <button class="sbtn primary" type="button" data-add="${it.id}">Add to plan</button>
@@ -309,7 +353,8 @@ function renderExplore() {
       </div>
     </div></article>`;
   }).join('');
-  renderExploreMap(list, kind);
+  renderExploreMap([...mine, ...list], kind);
+  enrichVisible(mine);
 }
 $('#xGrid').addEventListener('click', async e => {
   const a = e.target.closest('[data-add]'), s = e.target.closest('[data-show]'), c = e.target.closest('[data-copy]'), sp = e.target.closest('[data-spot]');
@@ -330,7 +375,7 @@ $('#xGrid').addEventListener('click', async e => {
   if (s) {
     const it = BY[s.dataset.show], lg = CITIES[it.c].lang === 'zh' ? 'zh' : 'vi';
     const text = it.k === 'food' ? (lg === 'zh' ? '我想要这个：' : 'Cho tôi món này: ') + it.l : it.k === 'buy' ? (lg === 'zh' ? '我想买这个：' : 'Tôi muốn mua cái này: ') + it.l : (lg === 'zh' ? '请带我去：' : 'Làm ơn đưa tôi đến: ') + it.l;
-    openShow(text, '', t(it.k === 'food' ? 'I’d like this: {n}' : it.k === 'buy' ? 'I’d like to buy this: {n}' : 'Please take me to: {n}', { n: nameOf(it) }), lg);
+    openShow(text, it.k === 'place' ? DETAILS[it.id]?.addr || '' : '', t(it.k === 'food' ? 'I’d like this: {n}' : it.k === 'buy' ? 'I’d like to buy this: {n}' : 'Please take me to: {n}', { n: nameOf(it) }), lg);
   }
   if (c) {
     const it = BY[c.dataset.copy];
@@ -338,5 +383,14 @@ $('#xGrid').addEventListener('click', async e => {
     catch { toast(t('Search {n} on Dianping (大众点评) or Trip.com for live reviews', { n: it.l })); }
   }
 });
-bindSeg('#xCity', v => { xCity = v; renderExplore(); });
+$('#xCity').addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]'); if (!b) return;
+  $$('#xCity button').forEach(x => x.setAttribute('aria-pressed', x === b)); xCity = b.dataset.v; renderExplore();
+});
+// Day trips you added yourself (e.g. Wuzhen) get their own city button once you have places there.
+function syncCityButtons() {
+  const host = $('#xCity'), want = Object.keys(plan.extra || {}).filter(c => mineList().some(m => m.c === c));
+  $$('#xCity button[data-extra]').forEach(b => { if (!want.includes(b.dataset.v)) { if (xCity === b.dataset.v) { xCity = 'sh'; $('#xCity [data-v="sh"]').setAttribute('aria-pressed', 'true'); } b.remove(); } });
+  want.forEach(c => { if (!host.querySelector(`[data-v="${CSS.escape(c)}"]`)) host.insertAdjacentHTML('beforeend', `<button type="button" data-v="${esc(c)}" data-extra="1" aria-pressed="${xCity === c}">${esc(cityName(c))}</button>`); });
+}
 bindSeg('#xKind', v => { xKind = v; renderExplore(); });

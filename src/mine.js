@@ -4,9 +4,9 @@
    a short description in English and Chinese), then saved with your plan so they stay available offline. */
 const MINE_CITY = c => CITIES[c] ? c : 'sh';
 const cityLocal = c => ({ sh:'上海', sz:'苏州', hz:'杭州', han:'Hà Nội', sgn:'Thành phố Hồ Chí Minh' })[c] || CITIES[c]?.l || '';
-async function jget(url, ms = 9000) {
+async function jget(url, ms = 9000, headers = {}) {
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), ms);
-  try { const r = await fetch(url, { signal: ctl.signal }); if (!r.ok) throw new Error('http ' + r.status); return await r.json(); }
+  try { const r = await fetch(url, { signal: ctl.signal, headers }); if (!r.ok) throw new Error('http ' + r.status); return await r.json(); }
   finally { clearTimeout(to); }
 }
 const osmRef = o => o ? ({ node:'N', way:'W', relation:'R' }[o.type] || o.type) + o.id : '';
@@ -14,7 +14,7 @@ const osmRef = o => o ? ({ node:'N', way:'W', relation:'R' }[o.type] || o.type) 
 function localAddr(a, c, name = '') {
   if (!a) return '';
   if (CITIES[c]?.lang === 'vi') return [[a.house_number, a.road].filter(Boolean).join(' ') || name, a.quarter || a.suburb, a.city_district, a.city || a.state].filter(Boolean).join(', ');
-  const no = a.house_number ? a.house_number + (/[号號]$/.test(a.house_number) ? '' : '号') : '';
+  const no = a.house_number ? a.house_number + (/^\d+[A-Za-z]?$/.test(a.house_number) ? '号' : '') : '';
   // Shanghai is a province-level city (state 上海市); elsewhere the city is 苏州市 or 杭州市. Sub-districts (街道) are left out.
   const top = /市$/.test(a.state || '') ? a.state : [a.city, a.state].find(x => /市$/.test(x || '')) || '';
   const district = [a.city_district, a.district, a.county, a.city, a.suburb].find(x => /[区县]$/.test(x || '')) || '';
@@ -24,7 +24,7 @@ function localAddr(a, c, name = '') {
 }
 const sameName = (a, b) => { const x = fold(a || ''), y = fold(b || ''); return !!x && !!y && (x.includes(y) || y.includes(x)); };
 async function wikiSummary(lang, title) {
-  const j = await jget(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`);
+  const j = await jget(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`, 9000, lang === 'zh' ? { 'Accept-Language': 'zh-CN' } : {});
   if (j.type === 'disambiguation') return null;
   const ex = String(j.extract || '').split(/(?<=[.!?])\s+|(?<=[。！？])/).slice(0, 3).join(' ').slice(0, 420);
   const img = j.thumbnail?.source || ''; // Wikimedia only serves standard thumbnail widths, so use it as given
@@ -82,11 +82,14 @@ async function enrichMine(id, force) {
   it.info = info; enriching.delete(id);
   savePlan(); renderMineIfShown(); if (!failed) renderDays();
 }
-function renderMineIfShown() { if (xKind === 'mine') renderExplore(); }
+function renderMineIfShown() { if ($('#panel-explore') && !$('#panel-explore').hidden) renderExplore(); }
+// Which Explore tab a place of your own belongs in.
+const mineKind = it => /restaurant|café|quick meal|bar|food court/.test(it.info?.kind || '') ? 'food' : /shop|shopping mall|department store/.test(it.info?.kind || '') ? 'buy' : 'place';
 
 /* ---------- cards ---------- */
 const KIND_ZH = { 'museum':'博物馆', 'gallery':'美术馆', 'attraction':'景点', 'viewpoint':'观景点', 'restaurant':'餐厅', 'café':'咖啡馆', 'quick meal':'快餐', 'bar':'酒吧', 'food court':'美食广场', 'theatre':'剧院', 'cinema':'电影院', 'temple or church':'寺庙或教堂', 'market':'市场', 'park':'公园', 'garden':'园林', 'shop':'商店', 'shopping mall':'商场', 'department store':'百货公司', 'historic site':'古迹', 'nature':'自然景观', 'zoo':'动物园', 'aquarium':'水族馆', 'theme park':'主题公园', 'place':'地点', 'district':'街区', 'town':'城镇', 'village':'村庄', 'city':'城市', 'lake':'湖', 'mountain':'山', 'island':'岛', 'beach':'海滩', 'nature reserve':'自然保护区', 'library':'图书馆', 'stadium':'体育场', 'water park':'水上乐园', 'artwork':'艺术品', 'station or airport':'车站或机场', 'place to stay':'住宿' };
 const kindLabel = k => LANG === 'zh' ? (KIND_ZH[k] || k) : k ? k[0].toUpperCase() + k.slice(1) : '';
+function enrichVisible(list) { if (navigator.onLine !== false) list.filter(it => !it.info?.fetched && !it.info?.err && !enriching.has(it.id)).slice(0, 3).forEach(it => enrichMine(it.id)); }
 function mineList() { return Object.values(plan.custom || {}).sort((a, b) => (b.added || 0) - (a.added || 0)); }
 function mineCard(it, ix) {
   const info = it.info || {}, c = MINE_CITY(it.c), zh = CITIES[c]?.lang === 'zh';
@@ -100,23 +103,23 @@ function mineCard(it, ix) {
   const v = it.verdict, vChip = v && LEVEL[v.level] ? `<span class="chip ${LEVEL[v.level][1]}">${t(LEVEL[v.level][0])}</span>` : '';
   const rows = [
     info.addr && [t('Address'), `<span lang="${zh ? 'zh-CN' : 'vi'}">${esc(info.addr)}</span>`],
-    info.hours && [t('Opening hours'), `<span class="mono">${esc(info.hours)}</span>`],
-    trip && [t('Getting there'), esc(trip.mode === 'walk' ? t('About {m} on foot from {from}', { m: fmtMins(trip.mins), from: cityName(trip.from || 'sh') }) : t('About {m} by {mode} from {from}', { m: fmtMins(trip.mins), mode: t(MODE[trip.mode] || trip.mode), from: cityName(trip.from || 'sh') }))],
+    info.hours && [t('Opening hours'), esc(fmtHours(info.hours))],
+    trip && [t('Getting there'), esc(trip.mode === 'walk' ? t('About {m} on foot from central {from}', { m: fmtMins(trip.mins), from: cityName(trip.from || 'sh') }) : t('About {m} by {mode} from central {from}', { m: fmtMins(trip.mins), mode: t(MODE[trip.mode] || trip.mode), from: cityName(trip.from || 'sh') }))],
     info.cuisine && [t('Cuisine'), esc(info.cuisine.replace(/;/g, ', ').replace(/_/g, ' '))],
-    info.phone && [t('Phone'), `<a href="tel:${esc(info.phone.replace(/[^\d+]/g, ''))}">${esc(info.phone)}</a>`],
-    info.web && [t('Website'), `<a href="${esc(/^https?:/.test(info.web) ? info.web : 'https://' + info.web)}" target="_blank" rel="noopener">${esc(info.web.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').slice(0, 40))}</a>`]
+    info.phone && [t('Phone'), telLink(info.phone)],
+    info.web && [t('Website'), webLink(info.web)]
   ].filter(Boolean);
   const status = busy ? t('Looking up details…') : info.err === 'offline' ? t('You’re offline. Details will load next time you have internet.') : info.err ? t('Couldn’t load details. Wikipedia is blocked in China, so try again before you fly or on roaming data.') : !info.fetched ? t('Details haven’t been looked up yet.') : !desc && !rows.length ? t('No public details found for this place. Add your own notes below.') : '';
   const mapHref = it.ll ? (zh ? `https://uri.amap.com/marker?position=${it.ll[1]},${it.ll[0]}&name=${encodeURIComponent(it.l || it.n)}&coordinate=wgs84&callnative=1` : `https://www.google.com/maps/search/?api=1&query=${it.ll[0]},${it.ll[1]}`)
     : (zh ? `https://uri.amap.com/search?keyword=${encodeURIComponent(it.l || it.n)}&callnative=1` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(it.n + ', ' + (CITYN[c] || ''))}`);
   return `<article class="xcard mine-card" data-id="${esc(it.id)}">${cov}<div class="xbody">
     <div><h3>${HAS_MAP && it.ll ? `<button class="xnum" type="button" data-fly="${esc(it.id)}" aria-label="${t('Show {n} on the map', { n: esc(name) })}">${ix + 1}</button>` : ''}${esc(name)}</h3>${sub ? `<div class="local">${esc(sub)}</div>` : ''}</div>
-    <div class="chips">${info.kind ? `<span class="chip out">${esc(kindLabel(info.kind))}</span>` : ''}<span class="chip">${fmtHrs(it.hrs || 1.5)}</span><span class="chip">${esc(cityName(c))}</span>${it.indoor ? `<span class="chip">${t('Indoors')}</span>` : ''}${vChip}${days.length ? `<span class="chip good">${t('In plan · {days}', { days: days.join(', ') })}</span>` : `<span class="chip warn">${t('Not in your plan')}</span>`}</div>
-    ${desc ? `<p>${esc(desc)}${wiki ? ` <a class="src" href="${esc(wiki)}" target="_blank" rel="noopener">Wikipedia</a>` : ''}</p>` : ''}
+    <div class="chips">${info.kind ? `<span class="chip out">${esc(kindLabel(info.kind))}</span>` : ''}<span class="chip">${fmtHrs(it.hrs || 1.5)}</span>${it.indoor ? `<span class="chip">${t('Indoors')}</span>` : ''}${vChip}${days.length ? `<span class="chip good">${t('In plan · {days}', { days: days.join(', ') })}</span>` : `<span class="chip warn">${t('Not in your plan')}</span>`}</div>
+    ${aboutHtml(info.desc, info.wiki, true)}
     ${v?.reasons?.length && (v.lang || 'en') === LANG ? `<div class="tip">${tipIcon}<span>${esc(v.reasons.join(' '))}</span></div>` : ''}
-    ${rows.length ? `<dl class="dl">${rows.map(([k, val]) => `<dt>${k}</dt><dd>${val}</dd>`).join('')}</dl>` : ''}
+    ${detailRows(rows)}
     ${status ? `<p class="mine-status${busy ? ' busy' : ''}" aria-live="polite">${status}</p>` : ''}
-    <div class="field mine-note"><label for="note-${esc(it.id)}">${t('Your notes')}</label><textarea id="note-${esc(it.id)}" data-note="${esc(it.id)}" placeholder="${t('Tickets, who recommended it, what to order…')}">${esc(it.note || '')}</textarea></div>
+    ${notesHtml(it.id, it.note)}
     <div class="acts">
       <select class="sel" id="madd-${esc(it.id)}" aria-label="${t('Day to add {n} to', { n: esc(name) })}">${DAYS.map(x => `<option value="${x.d}">${dayShort(x.d)}</option>`).join('')}</select>
       <button class="sbtn primary" type="button" data-madd="${esc(it.id)}">${t('Add to plan')}</button>
@@ -128,21 +131,13 @@ function mineCard(it, ix) {
     </div>
   </div></article>`;
 }
-function renderMine() {
-  const list = mineList(), g = $('#xGrid');
-  $('#xContext').innerHTML = t('Places you added yourself, with details looked up from OpenStreetMap and Wikipedia and saved for offline use. Add more with <b>Can I go to…?</b> on the Plan tab.');
-  $('#xRank').hidden = true;
-  g.innerHTML = list.length ? list.map(mineCard).join('') : `<div class="mine-empty glass"><b>${t('No places of your own yet.')}</b><p>${t('Search any place with Can I go to…? on the Plan tab, or choose “Something else” on a day. It will appear here with its details.')}</p><button class="btn" type="button" data-goplan>${t('Go to Plan')}</button></div>`;
-  renderExploreMap(list, 'mine');
-  if (navigator.onLine !== false) list.filter(it => !it.info?.fetched && !it.info?.err && !enriching.has(it.id)).slice(0, 3).forEach(it => enrichMine(it.id));
-}
 let delArmedMine = null;
 $('#xGrid').addEventListener('click', async e => {
   const a = e.target.closest('[data-madd]');
   if (a) {
     const id = a.dataset.madd, d = +$('#madd-' + id).value;
     if (!plan.items[d].includes(id)) plan.items[d].push(id);
-    savePlan(); renderDays(); renderMine(); toast(t('{name} added to {day}', { name: plan.custom[id].n, day: dayLabel(d) })); return;
+    savePlan(); renderDays(); renderExplore(); toast(t('{name} added to {day}', { name: plan.custom[id].n, day: dayLabel(d) })); return;
   }
   const sh = e.target.closest('[data-mshow]');
   if (sh) { const it = plan.custom[sh.dataset.mshow], zh = CITIES[MINE_CITY(it.c)]?.lang === 'zh'; openShow((zh ? '请带我去：' : 'Làm ơn đưa tôi đến: ') + (it.l || it.n), it.info?.addr || '', t('Please take me to: {n}', { n: it.n }), zh ? 'zh' : 'vi'); return; }
@@ -154,11 +149,12 @@ $('#xGrid').addEventListener('click', async e => {
     const id = del.dataset.mdel;
     if (delArmedMine !== id) { delArmedMine = id; del.textContent = t('Tap again to remove'); return; }
     const n = plan.custom[id]?.n; delete plan.custom[id]; Object.keys(plan.items).forEach(d => plan.items[d] = plan.items[d].filter(x => x !== id)); delArmedMine = null;
-    savePlan(); renderDays(); renderMine(); toast(t('Removed {n}', { n })); return;
+    savePlan(); renderDays(); renderExplore(); toast(t('Removed {n}', { n })); return;
   }
-  if (e.target.closest('[data-goplan]')) $('#tab-plan').click();
 });
 $('#xGrid').addEventListener('change', e => {
   const n = e.target.closest('[data-note]'); if (!n) return;
-  const it = plan.custom[n.dataset.note]; if (it) { it.note = n.value.trim(); savePlan(); toast(t('Note saved')); }
+  const id = n.dataset.note, it = plan.custom[id], v = n.value.trim();
+  if (it) { it.note = v; savePlan(); } else { if (v) CARD_NOTES[id] = v; else delete CARD_NOTES[id]; store.set('notes', CARD_NOTES); }
+  toast(t('Note saved'));
 });
