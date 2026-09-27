@@ -18,10 +18,17 @@ async function geo(q) {
 (async () => {
   const jobs = [
     ...ITEMS.filter(i => i.k === 'place').map(i => ({ id: i.id, qs: [`${i.l} ${CITIES[i.c].l}`, `${i.n}, ${CITIES[i.c].n}`], near: CENTRE[i.c], max: i.c === 'sh' ? 60 : 40 })),
-    ...PLACES.map(p => ({ id: 'p-' + p.id, qs: [p.zh, p.n], near: null, max: 99999 }))
+    ...PLACES.map(p => ({ id: 'p-' + p.id, qs: [p.zh, p.n], near: null, max: 99999 })),
+    // Restaurants and shops with a real address: s-<item id>-<spot index>
+    ...ITEMS.filter(i => i.spots).flatMap(i => i.spots.map((sp, k) => ({ sp, k, i })).filter(({ sp }) => /\d|Rd|St|Lane|Street/.test(sp.a)).map(({ sp, k, i }) => ({
+      id: `s-${i.id}-${k}`, near: CENTRE[i.c], max: i.c === 'sh' ? 60 : 40,
+      qs: CITIES[i.c].lang === 'zh' ? [`${sp.l} ${CITIES[i.c].l}`, /\d/.test(sp.al) ? sp.al.replace(/ .*/, '') : null, `${sp.n}, ${CITIES[i.c].n}`].filter(Boolean) : [`${sp.n}, ${CITIES[i.c].n}`, `${sp.a}, ${CITIES[i.c].n}`]
+    })))
   ];
+  // Checked by hand: these matched the wrong branch or place, so they stay unpinned rather than wrong.
+  const WRONG = new Set('s-f-eggcoffee-1 s-f-hongshao-0 s-f-lionhead-1 s-b-silk-hz-0 s-f-beggars-1 s-f-catear-0 s-f-ljshrimp-1 s-f-hongshao-1 s-f-banhcuon-0 s-f-kem-0 s-f-squirrel-1 s-b-duoyunxuan-0 s-f-sjb-1 s-f-cifan-0'.split(' '));
   for (const j of jobs) {
-    if (out[j.id]) continue;
+    if (out[j.id] || WRONG.has(j.id)) continue;
     let hit = null;
     for (const q of j.qs) {
       const res = await geo(q);

@@ -194,6 +194,10 @@ __STYLES__
         </div>
         <p class="context glass" id="xContext"></p>
         <p class="rank-note" id="xRank">Sorted best first. ★ Top pick, then Worth it, then If you have time. These are our editors’ picks, not live star ratings. Tap <b>Reviews</b> to copy a place’s Chinese name for Dianping (大众点评) or Trip.com.</p>
+        <div class="xmap-wrap" id="xMapWrap" hidden>
+          <div class="xmap-bar"><p class="xmap-note" id="xMapNote"></p><button class="sbtn" id="xMapToggle" type="button" aria-expanded="true" aria-controls="xMap">Hide map</button></div>
+          <div class="xmap" id="xMap" role="region" aria-label="Map of these recommendations"></div>
+        </div>
         <div class="xgrid" id="xGrid"></div>
       </section>
 
@@ -228,6 +232,7 @@ __STYLES__
       <div class="field"><label for="sCity">City</label><select class="sel" id="sCity"></select></div>
     </div>
     <div class="field"><label for="sAddr">Address in the local language</label><textarea id="sAddr" placeholder="Copy it from your booking, e.g. 上海市黄浦区…"></textarea><span class="hint">This is what a driver needs. It also goes on the Say tab.</span></div>
+    <div class="field" id="sMapField"><span class="lbl-row"><label for="sMap">Location on the map</label><button class="sbtn" type="button" id="sFind">Find on map</button></span><div class="stay-map" id="sMap" role="application" aria-label="Map: tap to pin your stay"></div><span class="hint" id="sMapHint"></span></div>
     <div class="dlg-row two">
       <div class="field"><label for="sRef">Booking reference</label><input id="sRef" autocomplete="off"></div>
       <div class="field"><label for="sPrice">Price</label><input id="sPrice" autocomplete="off" placeholder="e.g. RM 480 total"></div>
@@ -255,6 +260,7 @@ __STYLES__
   </div>
 </div>
 
+<script>/* __LEAFLET__ */</script>
 <script>
 (() => {
 'use strict';
@@ -735,6 +741,7 @@ function openStay(id, preset = {}) {
   fillDates(v.from, v.to); fillCities(v.from, v.city);
   $('#sDel').hidden = !x; $('#sDel').textContent = t('Delete stay'); $('#sErr').textContent = '';
   if (stayDlg.showModal) stayDlg.showModal(); else stayDlg.setAttribute('open', '');
+  if (typeof stayMapOpen === 'function') stayMapOpen(v.ll, v.city);
   setTimeout(() => (x ? $('#sName') : $('#sName')).focus(), 30);
 }
 function closeStay() { if (stayDlg.close) stayDlg.close(); else stayDlg.removeAttribute('open'); }
@@ -754,7 +761,11 @@ $('#stayForm').addEventListener('submit', e => {
   for (let d = v.from; d < v.to; d++) if (!citiesForNight(d).includes(v.city)) { err(t('On the night of {day} you are in {city}. Split this into two stays.', { day: day(nightTs(d), 'Asia/Shanghai'), city: t(CITY_N[citiesForNight(d)[0]]) })); $('#sTo').focus(); return; }
   const clash = myStays.find(s => s.id !== editing && s.from < v.to && v.from < s.to);
   if (clash) { err(t('These dates overlap with {name} ({a}–{b} Feb). Change the dates, or edit that stay first.', { name: clash.name, a: clash.from, b: clash.to })); $('#sFrom').focus(); return; }
-  if (editing) Object.assign(myStays.find(s => s.id === editing), v); else myStays.push({ id: 's' + Date.now().toString(36), ...v });
+  let saved;
+  if (editing) { saved = myStays.find(s => s.id === editing); if (saved.addr !== v.addr || saved.name !== v.name || saved.city !== v.city) delete saved.ll; Object.assign(saved, v); }
+  else myStays.push(saved = { id: 's' + Date.now().toString(36), ...v });
+  if (typeof sLL !== 'undefined' && sLL) saved.ll = sLL;
+  else if (!saved.ll && typeof locateStay === 'function') locateStay(saved);
   if (v.addr) { const k = stayLang(v.city); addr[k] = { name: v.name, text: v.addr }; store.set('addr', addr); if (lang === k) renderAddr(); }
   saveStays(); closeStay();
   toast(t(editing ? 'Saved {name}' : 'Added {name}', { name: v.name }) + (v.addr ? ' · ' + t('Its address is on the Say tab too.') : ''));
@@ -1136,6 +1147,7 @@ bindSeg('#wCity', v => { wCity = v; renderWeather(); });
 /* __ENGINE__ */
 /* __PLACES__ */
 /* __EVALUATE__ */
+/* __MAP__ */
 /* __TRANSLATE__ */
 
 /* ---------------- tabs ---------------- */

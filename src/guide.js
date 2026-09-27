@@ -111,6 +111,7 @@ $('#planClear').addEventListener('click', e => {
 
 /* ---------- day cards ---------- */
 const trainIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="14" rx="4"/><path d="M5 11h14M9 21l-2 0M8 17l-2 4M16 17l2 4M9 14h.01M15 14h.01"/></svg>';
+const mapIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5z"/><path d="M9 4v13M15 6.5v13"/></svg>';
 const planeIcon = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
 function addOptions(x) {
   const inPlan = new Set(Object.values(plan.items).flat());
@@ -170,11 +171,14 @@ function renderDays() {
           <span class="own-in" id="own-${x.d}" hidden><input class="txt" id="ownN-${x.d}" placeholder="e.g. Meet friends for dinner" aria-label="Your stop"><select class="sel" id="ownH-${x.d}" aria-label="How long">${[.5,1,1.5,2,3,4].map(h => `<option value="${h}"${h === 1.5 ? ' selected' : ''}>${fmtHrs(h)}</option>`).join('')}</select><button class="sbtn primary" type="button" data-own="${x.d}">Add</button></span>
         </div>
         <div class="ck-inline" id="cki-${x.d}" aria-live="polite"></div>
+        ${HAS_MAP ? `<button class="sbtn daymap-btn" type="button" data-daymap="${x.d}" aria-expanded="${openDays.has(x.d)}" aria-controls="dm-${x.d}">${mapIcon}${t(openDays.has(x.d) ? 'Hide map' : 'Map & distances')}</button>
+        ${openDays.has(x.d) ? `<div class="daymap" id="dm-${x.d}" role="region" aria-label="${t('Map of {day}', { day: dayLabel(x.d) })}"></div><div class="legs" id="dl-${x.d}" aria-live="polite"></div>` : ''}` : ''}
         <div class="load${over ? ' over' : ''}"><span class="lb" aria-hidden="true"><i style="width:${Math.min(100, hrs / Math.max(.5, x.free) * 100)}%"></i></span><span>${over ? t('Too much for one day:') + ' ' : ''}${t('about {h} of {f} free', { h: fmtHrs(+hrs.toFixed(1)), f: fmtHrs(+x.free.toFixed(1)) })}</span></div>
       </div>
     </article>`;
   }).join('');
   $('#planSum').textContent = t('{n} stops across {d} days. Everything below can be changed.', { n: total, d: DAYS.length });
+  if (HAS_MAP && host.offsetParent !== null) restoreDayMaps();
 }
 function insertSorted(d, id) {
   const L = plan.items[d], k = sortKey(getItem(id));
@@ -268,6 +272,7 @@ function renderExplore() {
   $('#xContext').innerHTML = kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
   $('#xRank').hidden = kind === 'stay' || kind === 'skip';
   const g = $('#xGrid');
+  if (kind === 'stay' || kind === 'skip') renderExploreMap([], kind);
   if (kind === 'stay') {
     g.innerHTML = STAYS[xCity].map((s, i) => `<article class="xcard">${cover({ id:`stay-${xCity}-${i}`, n:s.n, l:s.n }, 'stay')}<div class="xbody"><h3>${esc(t(s.n))}</h3><div class="chips"><span class="chip good">${t('Best for: {x}', { x: esc(t(s.best)) })}</span></div>
       <dl class="dl"><dt>${t('Good')}</dt><dd>${esc(t(s.good))}</dd><dt>${t('Watch')}</dt><dd>${esc(t(s.watch))}</dd></dl><div class="how">${esc(t(s.how))}</div></div></article>`).join('');
@@ -282,11 +287,12 @@ function renderExplore() {
   }
   const inPlan = Object.entries(plan.items);
   const list = ITEMS.filter(i => i.c === xCity && i.k === kind).map((it, ix) => ({ it, ix })).sort((a, b) => b.it.tier - a.it.tier || a.ix - b.ix).map(o => o.it);
-  g.innerHTML = list.map(it => {
+  g.innerHTML = list.map((it, ix) => {
+    const pinned = kind === 'place' ? !!COORDS[it.id] : (it.spots || []).some((s, k) => spotLL(it, k));
     const on = inPlan.filter(([, ids]) => ids.includes(it.id)).map(([d]) => dayShort(+d));
     const lng = CITIES[it.c].lang === 'zh' ? 'zh-CN' : 'vi';
-    return `<article class="xcard">${cover(it)}<div class="xbody">
-      <div><h3>${esc(nameOf(it))}</h3>${LANG === 'zh' && hasCJK(it.l) ? `<div class="local">${esc(it.n)}</div>` : it.l !== it.n ? `<div class="local" lang="${lng}">${esc(it.l)}</div>` : ''}</div>
+    return `<article class="xcard" data-id="${it.id}">${cover(it)}<div class="xbody">
+      <div><h3>${HAS_MAP && pinned ? `<button class="xnum" type="button" data-fly="${it.id}" title="${t('Show on map')}" aria-label="${t('Show {n} on the map', { n: esc(nameOf(it)) })}">${ix + 1}</button>` : ''}${esc(nameOf(it))}</h3>${LANG === 'zh' && hasCJK(it.l) ? `<div class="local">${esc(it.n)}</div>` : it.l !== it.n ? `<div class="local" lang="${lng}">${esc(it.l)}</div>` : ''}</div>
       <div class="chips">${it.k === 'place' ? `<span class="chip out">${t(WHEN_LABEL[it.when])}</span><span class="chip">${fmtHrs(it.hrs)}</span>` : it.spots?.length ? `<span class="chip gold">${priceText(it.c, [Math.min(...it.spots.map(s => s.p[0])), Math.max(...it.spots.map(s => s.p[1]))], it.unit)}</span>` : ''}${on.length ? `<span class="chip good">${t('In plan · {days}', { days: on.join(', ') })}</span>` : ''}</div>
       <p class="why">${esc(t(it.why))}</p>
       <p>${esc(t(it.d))}</p>
@@ -300,6 +306,7 @@ function renderExplore() {
       </div>
     </div></article>`;
   }).join('');
+  renderExploreMap(list, kind);
 }
 $('#xGrid').addEventListener('click', async e => {
   const a = e.target.closest('[data-add]'), s = e.target.closest('[data-show]'), c = e.target.closest('[data-copy]'), sp = e.target.closest('[data-spot]');

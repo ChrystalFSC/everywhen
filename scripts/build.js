@@ -12,13 +12,16 @@ const styles = inject(inject(read('src/styles.css'),
   '__FONT_DISPLAY__', b64('data/fonts/big-shoulders-display.woff2')),
   '__FONT_MONO__', b64('data/fonts/jetbrains-mono.woff2'));
 let src = read('src/everywhen.html');
-src = inject(src, '__STYLES__', styles);
+// Leaflet (BSD-2-Clause) is bundled so maps need no CDN; its CSS goes first so ours can override it.
+src = inject(src, '__STYLES__', read('data/vendor/leaflet.css') + '\n' + styles);
+src = inject(src, '/* __LEAFLET__ */', read('data/vendor/leaflet.js').replace(/\/\/# sourceMappingURL=.*$/m, ''));
 src = inject(src, '/* __GUIDE_DATA__ */', read('src/guide-data.js'));
 src = inject(src, '/* __GUIDE__ */', read('src/guide.js'));
 src = inject(src, '/* __ENGINE__ */', read('src/engine.js'));
 src = inject(src, '/* __I18N__ */', read('src/i18n.js'));
 src = inject(src, '/* __PLACES__ */', read('src/places-data.js'));
 src = inject(src, '/* __EVALUATE__ */', read('src/evaluate.js'));
+src = inject(src, '/* __MAP__ */', read('src/map.js'));
 const zh = {};
 read('data/zh.tsv').split(/\r?\n/).forEach(line => { if (!line || line.startsWith('#')) return; const i = line.indexOf('\t'); if (i > 0) zh[line.slice(0, i)] = line.slice(i + 1); });
 src = inject(src, '__ZH__', JSON.stringify(zh));
