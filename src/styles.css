@@ -878,3 +878,37 @@ button.night.open:hover{border-color:rgba(232,178,26,.6)}
 .xfer-warn{color:#8A4B00}
 .xfer-tip{font-size:12.5px;color:var(--muted);padding:9px 11px;border-radius:10px;background:var(--butter)}
 .xfer-in .sbtn{justify-self:start}
+
+/* Trips: switcher, example note, create/edit form */
+.trip-pick{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;margin-top:4px;padding:4px 8px 4px 0;border:0;background:none;color:var(--ink);cursor:pointer;text-align:left;border-radius:10px}
+.trip-pick .trip-name{font:700 13px/1.2 var(--f-sans)}
+.trip-pick .route{margin:0}
+.trip-pick svg{width:14px;height:14px;color:var(--out)}
+.trip-pick:hover .trip-name{color:var(--out)}
+.sample-note{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 16px;border-radius:18px;border:1.5px solid rgba(232,178,26,.5);background:linear-gradient(135deg,#FFF8DD,#fff)}
+.sample-note p{margin:3px 0 0;font-size:13px;color:var(--muted);max-width:58ch}
+.dlg-wide{width:min(720px,calc(100vw - 32px))}
+.trip-list{display:grid;gap:8px}
+.trip-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#fff}
+.trip-row.on{border-color:rgba(139,108,240,.5);background:var(--lilac)}
+.trip-main{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.trip-main b{font-size:15px}
+.trip-main small{flex-basis:100%;font:500 11.5px/1.3 var(--f-mono);color:var(--muted);letter-spacing:.04em}
+.wlegs{display:grid;gap:12px}
+.wleg{position:relative;display:grid;gap:10px;margin:0;padding:14px;border-radius:16px;border:1px solid var(--line-2);background:rgba(139,108,240,.04);min-width:0}
+.wleg legend{padding:0 6px;font:700 11px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--out)}
+.wleg-x{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:1px solid var(--line-2);background:#fff;color:var(--muted);cursor:pointer}
+.wrow{display:grid;gap:10px}
+.wrow.two{grid-template-columns:1fr 1fr}
+.wrow.four{grid-template-columns:1.3fr 1fr 1.3fr 1fr}
+.wleg .field input{min-height:44px}
+.wleg .ap{position:relative}
+.wleg .ac li{display:grid;grid-template-columns:auto 1fr;gap:0 8px}
+.wleg .ac li small{grid-column:2}
+.field label small{font-weight:500;letter-spacing:0;text-transform:none;color:var(--dim)}
+.wleg-sum{margin:0;font-size:12.5px;color:var(--muted)}
+.wleg-sum.bad{color:#B0284F;font-weight:600}
+@media (max-width:560px){.wrow.two,.wrow.four{grid-template-columns:1fr 1fr}.wrow.two{grid-template-columns:1fr}}
+.wrow > *{min-width:0}
+.wleg input,.wleg select{width:100%;min-width:0;box-sizing:border-box}
+.wleg input[type="date"],.wleg input[type="time"]{padding-inline:10px;font-size:14px}

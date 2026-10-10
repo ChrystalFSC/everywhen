@@ -94,7 +94,9 @@ const HOME_CUR = TRIP.homeCur || curOf(HOME.cc) || 'USD';
 const STOPS = LEGS.slice(0, -1).map((l, i) => ({ code: l.to, i, t0: l.arr, t1: LEGS[i + 1].dep, kind: LEGS[i + 1].dep - l.arr < 24 * H ? 'transfer' : 'stay' }));
 if (!ROUND && TRIP.end) STOPS.push({ code: LAST.to, i: LEGS.length - 1, t0: LAST.arr, t1: Math.max(LAST.arr + 3 * H, zoned(TRIP.end + 'T11:00', CITY[LAST.to].tz)), kind: 'stay', final: true });
 const MAIN = STOPS.length ? STOPS.reduce((a, b) => (b.t1 - b.t0) > (a.t1 - a.t0) ? b : a) : null;
-LEGS.forEach((l, i) => l.dir = !MAIN || i <= MAIN.i ? 'out' : 'ret');
+// The way home starts when you leave the last city you stay in (the Shanghai trip: from Shanghai on).
+const LAST_STAY = [...STOPS].reverse().find(s => s.kind === 'stay') || MAIN;
+LEGS.forEach((l, i) => l.dir = !LAST_STAY || i <= LAST_STAY.i ? 'out' : 'ret');
 const MOTION_END = STOPS.at(-1)?.final ? STOPS.at(-1).t1 : LAST.arr;
 const TRIP_START = LEGS[0].dep - 3 * H, TRIP_END = MOTION_END + 90 * M;
 const SEGS = [{ kind:'ground', city: HOME.code, t0: TRIP_START, t1: LEGS[0].dep, w: 5, stage:'pre' }];
@@ -157,3 +159,8 @@ function hmz(t, tz) { return new Intl.DateTimeFormat('en-GB', { timeZone: tz, ho
 const gmtOff = off => `GMT${off >= 0 ? '+' : '−'}${Math.floor(Math.abs(off))}${Math.abs(off) % 1 ? ':' + String(Math.round(Math.abs(off) % 1 * 60)).padStart(2, '0') : ''}`;
 const TRIP_LANGS = [...new Set(STOPS.map(s => langOf(CITY[s.code].cc)))].filter(l => l !== 'en' || STOPS.every(s => langOf(CITY[s.code].cc) === 'en'));
 const TRIP_CURS = [...new Set(STOPS.map(s => curOf(CITY[s.code].cc)).filter(c => c && c !== HOME_CUR))];
+
+// Airports in the same city (Osaka's Itami and Kansai) are drawn as one place on the trip map.
+const SAME_CITY = {};
+Object.values(CITY).forEach(c => { const twin = Object.values(CITY).find(o => o !== c && o.city === c.city && Math.hypot(o.lat - c.lat, o.lon - c.lon) < 1 && (SAME_CITY[o.code] === undefined || SAME_CITY[o.code] === o.code)); SAME_CITY[c.code] = twin && SAME_CITY[twin.code] === twin.code ? twin.code : c.code; });
+const ROUTE_LABEL = [HOME.code, ...LEGS.map(l => l.to)].filter((c, i, a) => i === 0 || SAME_CITY[c] !== SAME_CITY[a[i - 1]]).join(' · ');

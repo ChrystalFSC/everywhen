@@ -2,16 +2,18 @@
    Everything you entered (plan, hotels, your own places, notes, checklist, rates, language) packed into one link,
    QR code or file. Nothing is uploaded: the data travels inside the link's #fragment, which browsers never send to
    the server. Importing always asks first, and replaces this device's data only when you confirm. */
-const XFER_KEYS = ['plan2', 'stays', 'addr', 'notes', 'prep', 'rates', 'money', 'lang'];
 // Links point to the published app, or to wherever it is being served from while developing.
 const XFER_URL = /\.github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname) ? location.origin + location.pathname.replace(/index\.html$/, '') : 'https://chrystalfsc.github.io/everywhen/';
 const b64u = bytes => { let s = ''; bytes.forEach(b => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const unb64u = s => { const t = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(t, c => c.charCodeAt(0)); };
 async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+// Everything saved, for every trip: trips, the open trip, and each trip's plan, stays, notes and so on.
+// Caches that the app can rebuild (forecasts, translations, last year's weather) stay behind.
+const XFER_SKIP = /(^|:)(wx|clim|trcache|tab)$/;
 function xferData() {
   const data = {};
-  XFER_KEYS.forEach(k => { const v = store.get(k, undefined); if (v !== undefined) data[k] = v; });
-  data.stays = myStays; // includes the built-in Mido booking, which is only saved once a stay is edited
+  try { Object.keys(localStorage).filter(k => k.startsWith('everywhen:')).map(k => k.slice(10)).filter(k => !XFER_SKIP.test(k)).forEach(k => { const v = store.get(k, undefined); if (v !== undefined) data[k] = v; }); } catch {}
+  if (PRE) data.stays = myStays; // includes the built-in Mido booking, which is only saved once a stay is edited
   return { app: 'everywhen', v: 1, at: Date.now(), data };
 }
 // "E1c." + deflated JSON, or "E1u." + plain JSON where the browser can't compress
@@ -29,10 +31,12 @@ async function xferDecode(text) {
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 function xferSummary(data) {
-  const p = data.plan2 || {}, stops = Object.values(p.items || {}).flat().length, own = Object.keys(p.custom || {}).length;
-  const hotels = (data.stays || []).length, notes = Object.keys(data.notes || {}).length + Object.values(p.custom || {}).filter(x => x.note).length;
-  const done = (data.prep || []).length;
+  const each = k => Object.entries(data).filter(([key]) => key === k || key.endsWith(':' + k)).map(([, v]) => v);
+  const plans = each('plan2'), stops = plans.reduce((a, p) => a + Object.values(p?.items || {}).flat().length, 0), own = plans.reduce((a, p) => a + Object.keys(p?.custom || {}).length, 0);
+  const hotels = each('stays').reduce((a, v) => a + (v || []).length, 0), notes = each('notes').reduce((a, v) => a + Object.keys(v || {}).length, 0) + plans.reduce((a, p) => a + Object.values(p?.custom || {}).filter(x => x.note).length, 0);
+  const done = each('prep').reduce((a, v) => a + (v || []).length, 0), trips = (data.trips || []).length;
   return [
+    trips && t(trips === 1 ? '1 trip of your own' : '{n} trips of your own', { n: trips }),
     t(hotels === 1 ? '1 stay' : '{n} stays', { n: hotels }), t(stops === 1 ? '1 plan stop' : '{n} plan stops', { n: stops }),
     own && t(own === 1 ? '1 place of your own' : '{n} places of your own', { n: own }), notes && t(notes === 1 ? '1 note' : '{n} notes', { n: notes }),
     done && t('{n} checklist items done', { n: done })
@@ -89,8 +93,8 @@ async function previewIncoming(text) {
 }
 function applyIncoming() {
   if (!incoming) return;
-  XFER_KEYS.forEach(k => { try { localStorage.removeItem('everywhen:' + k); } catch {} });
-  Object.entries(incoming.data).forEach(([k, v]) => { if (XFER_KEYS.includes(k)) store.set(k, v); });
+  try { Object.keys(localStorage).filter(k => k.startsWith('everywhen:') && !XFER_SKIP.test(k.slice(10))).forEach(k => localStorage.removeItem(k)); } catch {}
+  Object.entries(incoming.data).forEach(([k, v]) => { if (/^(t:[\w-]+:)?[\w:-]+$/.test(k) && !XFER_SKIP.test(k)) store.set(k, v); });
   try { sessionStorage.setItem('everywhen:imported', '1'); } catch {}
   history.replaceState(null, '', location.pathname + '#trip'); location.reload();
 }

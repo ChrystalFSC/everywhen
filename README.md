@@ -14,6 +14,20 @@ When the page opens, the route draws itself across a dot-matrix map of Southeast
 
 The scrubber bar is deliberately not to scale. The flights are stretched so a 2-hour flight stays visible next to a 6-day stay.
 
+## Any trip, not just one
+
+Everywhen started as a companion for one trip (Kuala Lumpur to Shanghai, February 2027), which ships as the built-in **example**. Anyone can now add their own: tap the trip name under the title, then **Create a trip**, and enter the flights the way they appear on a booking (airports by city or code, local departure and arrival times, optional flight number and airline). One-way trips ask for a last day instead of a flight home.
+
+From those flights alone the app works out everything else:
+
+- **Stops and nights.** A stop under 24 hours is a transfer; longer is a stay. Each night is placed in the city you are in at 23:30 local time, or marked as an overnight flight.
+- **Days and free hours.** Waking hours run 08:00–22:00, starting 1.5 hours after landing and ending 2.5 hours before an international flight (1.5 before a domestic one). Full days in one city can become day trips.
+- **The trip map** frames the airports anywhere in the world (routes across the Pacific are drawn on a 0–360° scale), and airports in the same city are drawn as one place.
+- **Clocks, currencies, languages and emergency numbers** come from each country, and the checklist is built from the destinations (entry rules, passport validity, unbooked nights, transfers, China's apps and payments, Grab in Southeast Asia).
+- **Weather:** where the guide has no hand-written climate notes, last year's weather on the same dates (Open-Meteo archive) stands in, with packing suggestions.
+
+Each trip keeps its own plan, stays, notes, checklist and saved forecasts. Switching trips reloads the app around the chosen one. Places, food and souvenirs are hand-picked only for the example's cities so far; elsewhere, places you add with **Can I go to…?** appear in Explore with their details.
+
 ## What's inside
 
 | Tab | What it does |
@@ -74,7 +88,10 @@ Then open http://localhost:8765. The service worker also runs on `localhost`.
 
 | Path | What it is |
 |---|---|
-| `src/everywhen.html` | App markup, trip data and core logic |
+| `src/everywhen.html` | App markup and core logic |
+| `src/trip.js` | The trip model: time zones, the example trip, country tables, and the stops, nights and days derived from any trip's flights |
+| `src/trips-ui.js` | Your trips: switcher, create and edit form, airport search |
+| `data/airports.json` | Every airport with an IATA code: city, country, position, time zone ([mwgg/Airports](https://github.com/mwgg/Airports), MIT). Built by `scripts/make-airports.js`; loaded only when the trip form opens |
 | `src/guide-data.js` | Cities, ranked places and food, things to skip, where to stay |
 | `src/guide.js` | Smart planner and Explore |
 | `src/translate.js` | Type-or-speak translator |

@@ -1362,7 +1362,7 @@ Import trip data	导入行程数据
 Move to another device	转移到其他设备
 Use Everywhen on another device	在其他设备上使用 Everywhen
 Your plan, hotels, places and notes are saved only on this device. Copy them to your phone with a link, QR code or file.	你的行程、住宿、地点和备注只保存在这台设备上。可用链接、二维码或文件复制到手机。
-Copies your plan, hotels, your own places, notes, checklist and settings. Nothing is uploaded: the data travels inside the link or file itself.	复制你的行程、住宿、自己添加的地点、备注、清单和设置。不会上传任何内容：数据就在链接或文件里。
+Copies all your trips with their plans, hotels, your own places, notes, checklists and settings. Nothing is uploaded: the data travels inside the link or file itself.	复制你的所有行程及其计划、住宿、自己添加的地点、备注、清单和设置。不会上传任何内容：数据就在链接或文件里。
 Send from this device	从这台设备发送
 Receive on this device	在这台设备上接收
 Paste a link or code	粘贴链接或代码
@@ -1372,3 +1372,166 @@ Save as file	保存为文件
 Check it	检查
 Open a file	打开文件
 Close	关闭
+At {airport} Terminal {n}	在{airport}{n}号航站楼
+At {airport}	在{airport}
+{city} · day {n} of {m}	{city} · 第{n}天，共{m}天
+In {city}	在{city}
+Your trip ends here.	行程到此结束。
+{no} to {city} leaves {day} {time}, in {d}.	{no}飞往{city}，{day} {time}起飞，还有{d}。
+Back in {city}	回到{city}
+Landed {time} at {airport} Terminal {n}.	{time}降落在{airport}{n}号航站楼。
+Landed {time} at {airport}.	{time}降落在{airport}。
+Trip complete	行程结束
+Typical {hi}° / {lo}°C	一般 {hi}° / {lo}°C
+{city} time	{city}时间
+Same time as {city}	与{city}同一时间
+{city} {time}	{city} {time}
+1 hour	1小时
+{n} hours	{n}小时
+{n} h	{n}小时
+Same as {city}	与{city}相同
+{h} ahead of {city}	比{city}快{h}
+{h} behind {city}	比{city}慢{h}
+Enjoy your trip	旅途愉快
+Clocks go back <b>{h}</b> when you land ({a} → {b}).	落地后时钟拨慢<b>{h}</b>（{a} → {b}）。
+Clocks go forward <b>{h}</b> when you land ({a} → {b}).	落地后时钟拨快<b>{h}</b>（{a} → {b}）。
+Flight	航班
+Land <b>{a}</b>, fly on at <b>{b}</b>. If you leave the airport, you go through immigration and security again, so be back by <b>{time}</b>.	<b>{a}</b>落地，<b>{b}</b>继续飞。如果出机场，回来要重新过边检和安检，请在<b>{time}</b>前回到机场。
+<span class="mono">{d}</span> in {city}	在{city}停留<span class="mono">{d}</span>
+{name}: {a} – {b}.	{name}：{a} – {b}。
+<span class="mono">1</span> night in {city}	在{city}住<span class="mono">1</span>晚
+<span class="mono">{n}</span> nights in {city}	在{city}住<span class="mono">{n}</span>晚
+Tap a night below to add where you’re staying.	点下方的某一晚，添加住宿。
+{day}: {note}	{day}：{note}
+1 night, {range}	1晚，{range}
+{n} nights, {range}	{n}晚，{range}
+No nights away	没有在外过夜
+Every night is booked.	每晚都已订好。
+These dates overlap with {name} ({a} – {b}). Change the dates, or edit that stay first.	这些日期与{name}（{a} – {b}）重叠。请修改日期，或先编辑那段住宿。
+You are on an overnight flight on {day}. Split this into two stays.	{day}你在红眼航班上。请拆成两段住宿。
+A checked phrasebook for {lang} is coming. Until then, type what you want to say in the translator above and show it full screen.	{lang}的校对版常用语即将推出。在此之前，请在上方翻译框输入想说的话，再全屏出示。
+Vietnamese banknotes in {cur}	越南纸币折合{cur}
+Chinese banknotes in {cur}	人民币纸币折合{cur}
+Tap Update rates to fetch today’s rates, or type your own.	点“更新汇率”获取今日汇率，或自己输入。
+Check the entry rules for {list}	确认{list}的入境规定
+Visa and arrival-card rules depend on your passport and change often. Check each country’s official site or with your airline.	签证和入境卡规定因护照而异，且经常变化。请查看各国官网或咨询航空公司。
+Check your passport is valid until at least {date}	确认护照有效期至少到{date}
+Book where you’ll stay	预订住宿
+1 night is still open. Tap it on the Trip tab to add your stay once booked.	还有1晚没订。订好后在“行程”页点那一晚添加。
+{n} nights are still open. Tap each one on the Trip tab to add your stay once booked.	还有{n}晚没订。订好后在“行程”页逐晚添加。
+Decide how to spend the {city} transfer	决定在{city}转机时怎么安排
+You land at {a} and fly on at {b}. Stay airside, or plan a short trip into town.	你{a}落地、{b}继续飞。可以留在机场，或安排短暂进城。
+Most shops, taxis and cafés in China expect mobile payment.	中国大多数商店、出租车和咖啡馆都用手机支付。
+Install Grab	安装 Grab
+The main ride-hailing app in Southeast Asia. It shows the fare before you ride.	东南亚主要的打车应用，上车前就显示车费。
+Carry some {list} cash	带一些{list}现金
+Useful for transfers and small places that don’t take foreign cards.	转机和不收外国卡的小店都用得上。
+Get travel insurance	购买旅行保险
+Check it covers medical care abroad and any activities you plan.	确认保险包括海外医疗和你计划的活动。
+Add it to your home screen and open it once with internet before you fly, so it works offline.	出发前把它加到主屏幕，并联网打开一次，这样离线也能用。
+All set for {date}	{date}出发，一切就绪
+No forecast yet	暂无预报
+Last year on these dates in {city}	去年同期的{city}
+Typical weather for your dates loads the first time you open this with internet.	联网后首次打开此页时，会加载你行程日期的典型天气。
+Loading last year’s weather on your dates…	正在加载去年同期的天气…
+Last year on your dates in {city}	去年同期的{city}
+Average high {hi}°C and low {lo}°C. Rain fell on {wet} of {n} days.	平均最高{hi}°C、最低{lo}°C。{n}天中有{wet}天下雨。
+Average high {hi}°C and low {lo}°C, with no real rain.	平均最高{hi}°C、最低{lo}°C，基本没下雨。
+One year’s weather is only a rough guide. The live forecast below covers your dates once they are within 16 days.	一年的天气只能作粗略参考。行程进入16天内后，下方会显示实时预报。
+The live forecast couldn’t load. You may be offline, or this page may be blocking the weather service. The typical weather above still applies.	实时预报无法加载。可能你已离线，或此页面屏蔽了天气服务。上方的典型天气仍可参考。
+Your trip days appear here once they are within 16 days.	行程进入16天内后，会在这里显示。
+Type a price the way it is written, like 350k or 1,500.	按标价输入价格，例如 350k 或 1,500。
+Your destinations use the same currency as home, so there is nothing to convert.	你的目的地和家乡用同一种货币，无需换算。
+You fly out today	今天出发
+Trip ends	行程结束
+Night: on a flight	住：在航班上
+last yr	去年
+Overnight flight	红眼航班
+On an overnight flight	在红眼航班上
+A weekend day, so popular sights will be busier.	周末，热门景点会更拥挤。
+In {city}, so it fits into any day there with time to spare.	就在{city}，在那里任何有空的日子都能去。
+Its listed opening hours suggest it is closed on Mondays, so we avoided Mondays.	标注的营业时间显示周一闭馆，所以避开了周一。
+Your {city} stop has about {h} of waking time.	你在{city}停留，醒着的时间大约{h}。
+Right in central {city}, walkable from the main sights.	就在{city}市中心，从主要景点步行可达。
+Inside {city}, {each} each way by {mode}.	在{city}市内，乘{mode}单程{each}。
+A full day out inside {city}: {each} each way by {mode}.	{city}市内一整天的行程：乘{mode}单程{each}。
+You still have {n} unbooked nights ({days}), so you could spend one of them there instead.	你还有{n}晚没订（{days}），可以在那里住一晚。
+About {km} from {city}, roughly {each} each way by air including airports.	距{city}约{km}，乘飞机单程约{each}（含机场时间）。
+It would take at least 2 days of your trip just to get there and back.	光往返就至少要花掉行程中的2天。
+A central base: most sights are a short ride away.	位置居中：去大多数景点都很近。
+Fine as a base, with some longer rides.	可以作为落脚点，有些地方路程较远。
+1 trip of your own	1个自己的行程
+{n} trips of your own	{n}个自己的行程
+Example	示例
+Open now	当前打开
+Open	打开
+Delete	删除
+Trip deleted	行程已删除
+Edit trip	编辑行程
+Create a trip	创建行程
+Save trip	保存行程
+Create trip	创建行程
+The airport list couldn’t load. You’re probably offline: only airports from your saved trips can be found.	机场列表无法加载，你可能已离线：只能找到已保存行程中的机场。
+Loading the airport list…	正在加载机场列表…
+Flight {n}	航班 {n}
+Remove flight {n}	删除航班 {n}
+From	出发地
+To	目的地
+City or airport code	城市或机场代码
+Departs	出发
+Local time	当地时间
+Arrives	到达
+Flight number	航班号
+optional	选填
+Airline	航空公司
+Arrives before it departs. Check the dates and times.	到达时间早于出发时间，请检查日期和时间。
+That is a {d} flight. Check the dates.	这趟航班要飞{d}，请检查日期。
+{d} flight	飞行{d}
+lands {day}	{day}落地
+Choose where flight {n} leaves from.	请选择航班 {n} 的出发地。
+Choose where flight {n} lands.	请选择航班 {n} 的目的地。
+Flight {n} leaves from and lands at the same airport.	航班 {n} 的出发地和目的地是同一个机场。
+Add when flight {n} departs.	请填写航班 {n} 的出发时间。
+Add when flight {n} arrives.	请填写航班 {n} 的到达时间。
+Flight {n} arrives before it departs. Times are local at each airport.	航班 {n} 的到达早于出发。时间均为各机场当地时间。
+Flight {n} would take over 22 hours. Check the arrival date.	航班 {n} 要飞超过22小时，请检查到达日期。
+Flight {n} departs before the flight before it lands. Put your flights in order.	航班 {n} 在上一班落地前就起飞了。请按顺序填写航班。
+The last day can’t be before your last flight lands.	最后一天不能早于最后一班航班落地的日期。
+Saving…	正在保存…
+Your trips	我的行程
+Shanghai, Feb 2027	上海，2027年2月
+This is an example trip.	这是一个示例行程。
+Add your own flights and Everywhen plans your trip the same way: the map, your nights, day plans, weather, phrases and money.	添加你自己的航班，Everywhen 会同样帮你规划：地图、住宿、每日计划、天气、常用语和货币。
+Hide	隐藏
+Add your flights in order, with the times shown on your booking. Each time is local to its airport. Everything else is worked out from them.	按顺序添加航班，填写预订上显示的时间。每个时间都是该机场的当地时间。其余内容会据此自动生成。
+Trip name	行程名称
+e.g. Japan in spring	例如 春季日本游
++ Add a flight	+ 添加航班
++ Add the flight home	+ 添加回程航班
+Last day of the trip	行程最后一天
+Your last flight doesn’t return to where you started, so choose when the trip ends.	你的最后一班航班不回到出发地，请选择行程结束的日期。
+Your home currency	你的本国货币
+Map of the route: {list}.	路线地图：{list}。
+Police and ambulance	警察和救护车
+Hotel address in the local language	当地语言的酒店地址
+Copy it from your booking confirmation and paste it here, exactly as written.	从预订确认中复制，原样粘贴到这里。
+Where you’re staying	你住的地方
+Layers for cold evenings	晚上冷，多带一层
+Japanese	日语
+Korean	韩语
+Thai	泰语
+Indonesian	印尼语
+Malay	马来语
+French	法语
+German	德语
+Spanish	西班牙语
+Italian	意大利语
+Portuguese	葡萄牙语
+Dutch	荷兰语
+Turkish	土耳其语
+Russian	俄语
+Arabic	阿拉伯语
+Hindi	印地语
+Greek	希腊语
+Cantonese	粤语
+English	英语

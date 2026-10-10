@@ -179,9 +179,9 @@ function renderDays() {
     const items = plan.items[x.d] || [], hrs = items.reduce((a, id) => a + (getItem(id)?.hrs || 0), 0); total += items.length;
     const cities = x.cities, nk = cities[cities.length - 1], w = dayWx(nk, x.d);
     const night = NIGHTS.find(n => n.d === x.d);
-    const nightChip = !night ? '<span class="chip ret">Home tonight</span>' : night.kind === 'booked' ? `<span class="chip good">${t('Night: {n}', { n: esc(night.short) })}</span>` : night.kind === 'open' ? '<span class="chip warn">Night: not booked</span>' : `<span class="chip">Night: transfer</span>`;
+    const nightChip = !night ? (x.d === DAYS[0].d && x.d < DAYS.at(-1).d ? `<span class="chip out">${t('You fly out today')}</span>` : `<span class="chip ret">${t(ROUND ? 'Home tonight' : 'Trip ends')}</span>`) : night.kind === 'flight' ? `<span class="chip">${t('Night: on a flight')}</span>` : night.kind === 'booked' ? `<span class="chip good">${t('Night: {n}', { n: esc(night.short) })}</span>` : night.kind === 'open' ? '<span class="chip warn">Night: not booked</span>' : `<span class="chip">Night: transfer</span>`;
     const over = hrs > x.free + .25, b = plan.base[x.d];
-    const baseSel = x.slots ? `<span>${cities.map(cityName).join(' → ')}</span>` : `<label class="sr" for="base-${x.d}">${t('Where on {day}', { day: dayLabel(x.d) })}</label><select class="sel base" id="base-${x.d}" data-base="${x.d}">${['sh','sz','hz', ...Object.keys(plan.extra || {})].map(c => `<option value="${c}"${b === c ? ' selected' : ''}>${c === 'sh' ? t('Shanghai') : t('Day trip: {city}', { city: cityName(c) })}</option>`).join('')}</select>`;
+    const baseSel = x.slots ? `<span>${cities.map(cityName).join(' → ')}</span>` : `<label class="sr" for="base-${x.d}">${t('Where on {day}', { day: dayLabel(x.d) })}</label><select class="sel base" id="base-${x.d}" data-base="${x.d}">${[x.city || 'sh', ...(x.city === 'sh' ? DAYTRIP_KEYS : []), ...Object.keys(plan.extra || {})].map(c => `<option value="${esc(c)}"${b === c ? ' selected' : ''}>${c === x.city || (!x.city && c === 'sh') ? esc(cityName(c)) : t('Day trip: {city}', { city: cityName(c) })}</option>`).join('')}</select>`;
     const trip = !x.slots && CITIES[b].kind === 'daytrip';
     const rainy = w.live && w.p >= 60 && items.some(id => { const it = getItem(id); return it && it.k === 'place' && !it.indoor; });
     const indoor = rainy ? ITEMS.filter(i => cities.includes(i.c) && i.indoor && !items.includes(i.id)).slice(0, 2).map(i => i.n) : [];
@@ -189,7 +189,7 @@ function renderDays() {
       <div class="day-h">
         <span class="dnum">${+isoDay(x.d).slice(8)}</span>
         <span class="dmeta"><b>${dayLabel(x.d)}</b>${baseSel}</span>
-        <span class="wchip" title="${esc(w.label)}">${wIcon(w.code)}${w.hi}° / ${w.lo}°${w.live ? '' : ' <span style="color:var(--dim);font-weight:500">avg</span>'}</span>
+        ${w.hi === '–' ? '' : `<span class="wchip" title="${esc(w.label)}">${wIcon(w.code)}${w.hi}° / ${w.lo}°${w.live ? '' : ` <span style="color:var(--dim);font-weight:500">${t(PRE ? 'avg' : 'last yr')}</span>`}</span>`}
         ${nightChip}
       </div>
       <div class="day-b">

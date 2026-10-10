@@ -25,6 +25,7 @@ src = inject(src, '/* __EVALUATE__ */', read('src/evaluate.js'));
 src = inject(src, '/* __MAP__ */', read('src/map.js'));
 src = inject(src, '/* __MINE__ */', read('src/mine.js'));
 src = inject(src, '/* __TRANSFER__ */', read('src/transfer.js'));
+src = inject(src, '/* __TRIPSUI__ */', read('src/trips-ui.js'));
 // qrcode-generator (MIT, Kazuhiko Arase) for the Move to another device QR code
 src = inject(src, '/* __QRCODE__ */', read('data/vendor/qrcode.js'));
 const zh = {};
