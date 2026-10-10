@@ -1,5 +1,6 @@
 /* ================= Smart planner + Explore ================= */
 const PHOTOS = __PHOTOS__;
+Object.assign(PHOTOS, AG_PHOTOS);
 // Cities in this trip that the guide doesn't cover yet get a plain entry, so every tab can name them.
 Object.values(CITY).forEach(c => { const k = ckey(c.code); if (!CITIES[k]) CITIES[k] = { n: c.city, l: c.city, lang: /^zh/.test(langOf(c.cc)) ? 'zh' : langOf(c.cc), kind: 'base', cc: c.cc, own: true }; });
 const CITYN = Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, v.n]));
@@ -7,7 +8,12 @@ const TIER = { 3:['Top pick','top'], 2:['Worth it','worth'], 1:['If you have tim
 const WHEN_LABEL = { morning:'Morning', afternoon:'Afternoon', evening:'Evening', any:'Any time', half:'Half day', full:'Full day' };
 const PACE = { relaxed:6, balanced:8, packed:10 };
 const ZONE_NEAR = { bund:['oldcity','pudong','center'], oldcity:['bund','french'], pudong:['bund'], center:['bund','french'], french:['center','oldcity'], lake:['hills'], hills:['lake'], north:['west'], west:['north'], oldq:['west'] };
-const near = (a, b) => !a || a === b || (ZONE_NEAR[a] || []).includes(b);
+// Guides built from Wikivoyage give each place its position as its zone ("@lat,lon"): near means within 3 km.
+const zoneLL = z => z.slice(1).split(',').map(Number);
+const near = (a, b) => {
+  if (a?.[0] === '@' && b?.[0] === '@') { const [p, q] = [zoneLL(a), zoneLL(b)]; return Math.hypot(p[0] - q[0], (p[1] - q[1]) * Math.cos(p[0] * Math.PI / 180)) * 111 <= 3; }
+  return !a || a === b || (ZONE_NEAR[a] || []).includes(b);
+};
 const fmtHrs = h => LANG === 'zh' ? (h < 1 ? Math.round(h * 60) + '分钟' : (+h.toFixed(1)) + '小时') : (h < 1 ? Math.round(h * 60) + ' min' : (+h.toFixed(1)) + ' h');
 const hasCJK = s => /[\u3400-\u9fff]/.test(s || '');
 const nameOf = it => LANG === 'zh' && hasCJK(it.l) ? it.l : t(it.n);
@@ -17,6 +23,7 @@ const dayLabel = d => { const tz = tzOfDay(d); return F(tz, { weekday:'short', d
 const dayShort = d => { const tz = tzOfDay(d); return F(tz, { weekday:'short', day:'numeric' }).format(dayAt(d, tz)); };
 /* Practical details for guide items, looked up at build time (scripts/fetch-details.js) so they work offline and in China. */
 const DETAILS = __DETAILS__;
+Object.assign(DETAILS, AG_DETAILS);
 const CARD_NOTES = tstore.get('notes', {});
 // OpenStreetMap opening hours ("Tu-Su 09:00-17:15; Mo off") in plain words.
 function fmtHours(h) {
@@ -64,7 +71,8 @@ DAYS.forEach(x => {
 });
 const dayOf = d => DAYS.find(x => x.d === +d);
 function daySlots(x) {
-  if (x.slots) return x.slots;
+  // A long arrival or departure day is still held to the chosen pace.
+  if (x.slots) return x.slots.map(([c, w, h]) => [c, w, Math.min(h, PACE[plan.prefs.pace])]);
   const b = plan.base[x.d] || x.city || 'sh', trip = CITIES[b]?.kind === 'daytrip';
   return [[b, 'full', PACE[plan.prefs.pace] - (trip ? CITIES[b].hrs : 0)]];
 }
@@ -97,7 +105,7 @@ function buildPlan(prefs) {
   if (PRE && base[PD(20)] === 'sh') { take(PD(20), BY.yuyuan); take(PD(20), BY['f-tangyuan']); notes.push('Yu Garden on Sat 20 Feb for the Lantern Festival, with tangyuan, the festival dessert.'); }
   for (const x of DAYS) {
     for (const [city, win, budget] of daySlots(x)) {
-      const meals = win === 'full' ? 2 : 1;
+      const meals = win === 'full' || budget >= 6 ? 2 : 1;
       // Reserve time for meals first, then fill the rest with sights.
       let left = budget - meals * .75 - items[x.d].filter(id => BY[id].c === city && BY[id].k === 'place').reduce((a, id) => a + BY[id].hrs, 0);
       let zone = items[x.d].map(id => BY[id]).find(i => i.c === city && i.k === 'place')?.zone || null;
@@ -109,7 +117,7 @@ function buildPlan(prefs) {
         if (pass === 1 && left < 2) break;
         take(x.d, it); left -= it.hrs; zone = zone || it.zone;
       }
-      const foods = ITEMS.filter(i => i.c === city && i.k === 'food' && !used.has(i.id) && fits(i, win, budget)).sort((a, b) => score(b) - score(a));
+      const foods = ITEMS.filter(i => i.c === city && i.k === 'food' && !used.has(i.id) && fits(i, win, budget)).sort((a, b) => (near(zone, b.zone) - near(zone, a.zone)) || score(b) - score(a));
       foods.slice(0, meals - items[x.d].filter(id => BY[id].k === 'food' && BY[id].c === city).length).forEach(f => take(x.d, f));
     }
     items[x.d].sort((a, b) => sortKey(BY[a]) - sortKey(BY[b]));
@@ -275,6 +283,24 @@ $('#days').addEventListener('change', e => {
 const EXPLORE_KEYS = PRE ? ['sh', 'sz', 'hz', 'han', 'sgn'] : [...BASE_KEYS, ...DAYTRIP_KEYS, ...STOP_KEYS.filter(k => !BASE_KEYS.includes(k))];
 let xCity = EXPLORE_KEYS[0] || 'sh', xKind = 'place';
 const hasGuide = k => !!CTX[k];
+const PRICE_CLASS = ['', 'Budget', 'Mid-range', 'Splurge'];
+const RANK_HTML = $('#xRank').innerHTML;
+// Explore's header for a city whose guide comes from Wikivoyage: where it came from, and a way to rebuild it.
+function autoSource(k) {
+  const m = AG_META[k], el = $('#xSource');
+  el.hidden = !m; if (!m) return;
+  el.innerHTML = t('Guide from <a href="{url}" target="_blank" rel="noopener">Wikivoyage</a> (CC BY-SA) with photos from Wikimedia Commons, built {date}.', { url: wvUrl(m.title), date: new Date(m.at).toLocaleDateString(LOCALE(), { day:'numeric', month:'short', year:'numeric' }) })
+    + ` <button class="linkbtn" type="button" data-agrefresh="${esc(k)}"${agStatus[k] === 'busy' ? ' disabled' : ''}>${t(agStatus[k] === 'busy' ? 'Updating…' : 'Update')}</button>`;
+}
+$('#xSource').addEventListener('click', e => { const b = e.target.closest('[data-agrefresh]'); if (b) { b.disabled = true; b.textContent = t('Updating…'); ensureAutoGuides(true); } });
+function autoContext(k) {
+  const st = agStatus[k], city = esc(cityName(k));
+  if (st === 'busy') return `<span class="ag-busy">${t('Building a guide for {city} from Wikivoyage, the free travel guide. This takes about 20 seconds.', { city })}</span>`;
+  if (st === 'none') return t('Wikivoyage has no guide for {city} yet. Add places with <b>Can I go to…?</b> on the Plan tab and they appear here with photos and details.', { city });
+  if (st === 'err') return t('Couldn’t build a guide for {city}. Wikivoyage may be blocked on this network, as it is in China. It will try again next time you’re online.', { city });
+  if (navigator.onLine === false) return t('A guide for {city} is built the first time you open Everywhen with internet. Until then, add places with <b>Can I go to…?</b> on the Plan tab.', { city });
+  return '';
+}
 const COVER = { sh:['#9B80F5','#FFE08A'], sz:['#8B6CF0','#FFD95A'], hz:['#A58BFF','#FFF0B8'], han:['#B39BFF','#FFD95A'], sgn:['#8B6CF0','#F5C542'], stay:['#B9A5FF','#FFF6D6'], skip:['#E28AA8','#FFE3EC'] };
 function cover(it, kindKey) {
   const ph = PHOTOS[it.id];
@@ -318,18 +344,26 @@ function spotsHtml(it) {
 function renderExplore() {
   const kind = xKind;
   syncCityButtons();
-  const own = !hasGuide(xCity);
-  $('#xContext').innerHTML = own ? (plan.extra?.[xCity] ? t('Your own day trip to {city}. Places you add there appear here with their details.', { city: esc(cityName(xCity)) }) : t('There’s no hand-picked guide for {city} yet. Add places with <b>Can I go to…?</b> on the Plan tab and they appear here with photos and details.', { city: esc(cityName(xCity)) })) : kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
+  const own = !hasGuide(xCity), auto = !!AG_META[xCity];
+  autoSource(xCity);
+  $('#xRank').innerHTML = auto ? t('Sights are sorted by how widely known they are around the world: ★ Top pick, then Worth it, then If you have time. Restaurants and shops keep the order Wikivoyage’s writers gave them. Places you added yourself come first, marked Yours.') : RANK_HTML;
+  const nights = AG_META[xCity]?.nights;
+  $('#xContext').innerHTML = own ? autoContext(xCity) || (plan.extra?.[xCity] ? t('Your own day trip to {city}. Places you add there appear here with their details.', { city: esc(cityName(xCity)) }) : t('There’s no hand-picked guide for {city} yet. Add places with <b>Can I go to…?</b> on the Plan tab and they appear here with photos and details.', { city: esc(cityName(xCity)) })) : auto ? (kind === 'buy' ? esc(BUY_TIP[xCity] || t('Markets, malls and shops picked by Wikivoyage’s writers.')) : kind === 'stay' ? esc(STAY_TIP[xCity] || t('Areas of {city} to stay in.', { city: cityName(xCity) })) : kind === 'skip' ? t('Safety advice and common scams in {city}, from Wikivoyage.', { city: esc(cityName(xCity)) })
+      : (nights ? t(nights === 1 ? 'You have <b>1 night</b> in {city}.' : 'You have <b>{n} nights</b> in {city}.', { n: nights, city: esc(cityName(xCity)) }) + ' ' : '') + CTX[xCity])
+    : kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
   $('#xRank').hidden = kind === 'stay' || kind === 'skip';
   const g = $('#xGrid');
   if (kind === 'stay' || kind === 'skip') renderExploreMap([], kind);
   if (kind === 'stay') {
-    g.innerHTML = (STAYS[xCity] || []).map((s, i) => `<article class="xcard">${cover({ id:`stay-${xCity}-${i}`, n:s.n, l:s.n }, 'stay')}<div class="xbody"><h3>${esc(t(s.n))}</h3><div class="chips"><span class="chip good">${t('Best for: {x}', { x: esc(t(s.best)) })}</span></div>
+    g.innerHTML = (STAYS[xCity] || []).map((s, i) => s.auto ? `<article class="xcard">${cover({ id:`stay-${xCity}-${i}`, n:s.n, l:s.n }, 'stay')}<div class="xbody"><h3>${esc(s.n)}</h3>
+      ${s.price ? `<div class="chips"><span class="chip gold">${esc(s.price.slice(0, 60))}</span></div>` : ''}${s.d ? `<p>${esc(s.d)}</p>` : ''}
+      ${detailRows([[t('Address'), s.addr && esc(s.addr)], [t('Website'), s.web && webLink(s.web)]])}
+      ${s.wv ? `<div class="acts"><a class="sbtn" href="${esc(s.wv)}" target="_blank" rel="noopener">${t('Read the area guide')}</a></div>` : ''}</div></article>` : `<article class="xcard">${cover({ id:`stay-${xCity}-${i}`, n:s.n, l:s.n }, 'stay')}<div class="xbody"><h3>${esc(t(s.n))}</h3><div class="chips"><span class="chip good">${t('Best for: {x}', { x: esc(t(s.best)) })}</span></div>
       <dl class="dl"><dt>${t('Good')}</dt><dd>${esc(t(s.good))}</dd><dt>${t('Watch')}</dt><dd>${esc(t(s.watch))}</dd></dl><div class="how">${esc(t(s.how))}</div></div></article>`).join('');
     return;
   }
   if (kind === 'skip') {
-    g.innerHTML = (SKIPS[xCity] || []).map(s => `<article class="xcard skip"><div class="xbody">
+    g.innerHTML = (SKIPS[xCity] || []).map(s => s.auto ? `<article class="xcard skip safe"><div class="xbody"><h3>${t('Stay safe in {city}', { city: esc(cityName(xCity)) })}</h3>${s.paras.map(p => `<p>${esc(p)}</p>`).join('')}</div></article>` : `<article class="xcard skip"><div class="xbody">
       <span class="chip bad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg>${t('Not recommended')}</span>
       <h3>${esc(t(s.n))}</h3>${s.l ? `<div class="local" lang="${CITIES[xCity].lang === 'zh' ? 'zh-CN' : 'vi'}">${esc(s.l)}</div>` : ''}
       <p><b>${t('Why:')}</b> ${esc(t(s.why))}</p><div class="instead"><b>${t('Instead:')}</b> ${esc(t(s.instead))}</div></div></article>`).join('');
@@ -345,17 +379,25 @@ function renderExplore() {
   }
   g.innerHTML = mine.map(mineCard).join('') + list.map((it, i) => {
     const ix = i + off, dt = DETAILS[it.id] || {};
-    const pinned = kind === 'place' ? !!COORDS[it.id] : (it.spots || []).some((s, k) => spotLL(it, k));
+    const pinned = kind === 'place' || it.auto ? !!COORDS[it.id] : (it.spots || []).some((s, k) => spotLL(it, k));
     const on = inPlan.filter(([, ids]) => ids.includes(it.id)).map(([d]) => dayShort(+d));
-    const lng = CITIES[it.c].lang === 'zh' ? 'zh-CN' : 'vi';
+    const lng = CITIES[it.c].lang === 'zh' ? 'zh-CN' : it.auto ? phr(langOf(ccOfKey(it.c))).speech : 'vi';
     return `<article class="xcard" data-id="${it.id}">${cover(it)}<div class="xbody">
       <div><h3>${HAS_MAP && pinned ? `<button class="xnum" type="button" data-fly="${it.id}" title="${t('Show on map')}" aria-label="${t('Show {n} on the map', { n: esc(nameOf(it)) })}">${ix + 1}</button>` : ''}${esc(nameOf(it))}</h3>${LANG === 'zh' && hasCJK(it.l) ? `<div class="local">${esc(it.n)}</div>` : it.l !== it.n ? `<div class="local" lang="${lng}">${esc(it.l)}</div>` : ''}</div>
-      <div class="chips">${it.k === 'place' ? `<span class="chip out">${t(WHEN_LABEL[it.when])}</span><span class="chip">${fmtHrs(it.hrs)}</span>` : it.spots?.length ? `<span class="chip gold">${priceText(it.c, [Math.min(...it.spots.map(s => s.p[0])), Math.max(...it.spots.map(s => s.p[1]))], it.unit)}</span>` : ''}${on.length ? `<span class="chip good">${t('In plan · {days}', { days: on.join(', ') })}</span>` : ''}</div>
-      <p class="why">${esc(t(it.why))}</p>
-      <p>${esc(t(it.d))}</p>
+      <div class="chips">${it.k === 'place' ? `<span class="chip out">${t(WHEN_LABEL[it.when])}</span><span class="chip">${fmtHrs(it.hrs)}</span>` : it.auto ? (it.pc ? `<span class="chip gold">${t(PRICE_CLASS[it.pc])}</span>` : '') + (it.price ? `<span class="chip">${esc(it.price.slice(0, 40))}</span>` : '') : it.spots?.length ? `<span class="chip gold">${priceText(it.c, [Math.min(...it.spots.map(s => s.p[0])), Math.max(...it.spots.map(s => s.p[1]))], it.unit)}</span>` : ''}${it.area ? `<span class="chip">${esc(it.area)}</span>` : ''}${on.length ? `<span class="chip good">${t('In plan · {days}', { days: on.join(', ') })}</span>` : ''}</div>
+      ${it.why ? `<p class="why">${esc(t(it.why))}</p>` : ''}
+      ${it.d ? `<p>${esc(t(it.d))}</p>` : ''}
       ${it.tip ? `<div class="tip">${tipIcon}<span>${esc(t(it.tip))}</span></div>` : ''}
       ${aboutHtml(dt.desc, dt.wiki)}
-      ${it.k === 'place' ? detailRows([
+      ${it.auto ? detailRows([
+        [t('Address'), dt.addr && `<span lang="${lng}">${esc(dt.addr)}</span>`],
+        [t('Opening hours'), dt.hours && esc(dt.hours)],
+        [t('Getting there'), it.how && esc(it.how)],
+        [t('Entry'), it.k === 'place' && it.price && esc(it.price)],
+        [t('Phone'), dt.phone && telLink(dt.phone)],
+        [t('Website'), dt.web && webLink(dt.web)],
+        [t('Read more'), dt.wiki?.en && `<a href="${esc(dt.wiki.en)}" target="_blank" rel="noopener">Wikipedia</a>`]
+      ]) : it.k === 'place' ? detailRows([
         [t('Address'), dt.addr && `<span lang="${lng}">${esc(dt.addr)}</span>`],
         [t('Opening hours'), dt.hours && esc(fmtHours(dt.hours))],
         [t('Getting there'), it.how && esc(t(it.how))],
@@ -366,7 +408,7 @@ function renderExplore() {
       <div class="acts">
         <select class="sel" id="add-${it.id}" aria-label="${t('Day to add {n} to', { n: esc(nameOf(it)) })}">${dayChoices(it.c)}</select>
         <button class="sbtn primary" type="button" data-add="${it.id}">Add to plan</button>
-        <button class="sbtn" type="button" data-show="${it.id}">${it.k === 'food' ? 'Show to order' : it.k === 'buy' ? 'Show to shop' : 'Show to driver'}</button>
+        <button class="sbtn" type="button" data-show="${it.id}">${it.auto ? t('Show to driver') : it.k === 'food' ? 'Show to order' : it.k === 'buy' ? 'Show to shop' : 'Show to driver'}</button>
         ${CITIES[it.c].lang === 'zh' ? `<button class="sbtn" type="button" data-copy="${it.id}" title="Copy the Chinese name to check live reviews">Reviews</button>` : ''}
       </div>
     </div></article>`;
@@ -390,7 +432,10 @@ $('#xGrid').addEventListener('click', async e => {
     toast(CITIES[it.c].kind === 'daytrip' ? t('{name} added. {day} is a {city} day trip.', { name: nameOf(it), day: dayLabel(d), city: cityName(it.c) }) : t('{name} added to {day}', { name: nameOf(it), day: dayLabel(d) }));
     $(`[data-add="${id}"]`)?.focus();
   }
-  if (s) {
+  if (s && BY[s.dataset.show]?.auto) {
+    const it = BY[s.dataset.show], lg = langOf(ccOfKey(it.c));
+    openShow((lg === 'zh' ? '请带我去：' : lg === 'vi' ? 'Làm ơn đưa tôi đến: ' : phr(lg).lead) + (it.l || it.n), DETAILS[it.id]?.addr || '', t('Please take me to: {n}', { n: it.n }), lg);
+  } else if (s) {
     const it = BY[s.dataset.show], lg = CITIES[it.c].lang === 'zh' ? 'zh' : 'vi';
     const text = it.k === 'food' ? (lg === 'zh' ? '我想要这个：' : 'Cho tôi món này: ') + it.l : it.k === 'buy' ? (lg === 'zh' ? '我想买这个：' : 'Tôi muốn mua cái này: ') + it.l : (lg === 'zh' ? '请带我去：' : 'Làm ơn đưa tôi đến: ') + it.l;
     openShow(text, it.k === 'place' ? DETAILS[it.id]?.addr || '' : '', t(it.k === 'food' ? 'I’d like this: {n}' : it.k === 'buy' ? 'I’d like to buy this: {n}' : 'Please take me to: {n}', { n: nameOf(it) }), lg);

@@ -182,6 +182,7 @@ __STYLES__
           </div>
         </div>
         <p class="context glass" id="xContext"></p>
+        <p class="xsource" id="xSource" hidden></p>
         <p class="rank-note" id="xRank">Sorted best first. ★ Top pick, then Worth it, then If you have time. Places you added yourself come first, marked Yours. The rest are our editors’ picks, not live star ratings. Tap <b>Reviews</b> to copy a place’s Chinese name for Dianping (大众点评) or Trip.com.</p>
         <div class="xmap-wrap" id="xMapWrap" hidden>
           <div class="xmap-bar"><p class="xmap-note" id="xMapNote"></p><button class="sbtn" id="xMapToggle" type="button" aria-expanded="true" aria-controls="xMap">Hide map</button></div>
@@ -1156,6 +1157,7 @@ $('#checks').addEventListener('change', e => {
 });
 
 /* __GUIDE_DATA__ */
+/* __AUTOGUIDE__ */
 /* __GUIDE__ */
 
 /* ---------------- Weather ---------------- */
@@ -1340,5 +1342,7 @@ addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TAB
 fit(); kick();
 i18nStart();
 checkImportLink();
+// Guides for cities without a hand-picked one are built from Wikivoyage the first time the app is online.
+ensureAutoGuides(); addEventListener('online', () => ensureAutoGuides());
 })();
 </script>

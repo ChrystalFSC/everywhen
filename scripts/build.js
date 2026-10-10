@@ -17,6 +17,7 @@ src = inject(src, '__STYLES__', read('data/vendor/leaflet.css') + '\n' + styles)
 src = inject(src, '/* __LEAFLET__ */', read('data/vendor/leaflet.js').replace(/\/\/# sourceMappingURL=.*$/m, ''));
 src = inject(src, '/* __TRIP__ */', read('src/trip.js'));
 src = inject(src, '/* __GUIDE_DATA__ */', read('src/guide-data.js'));
+src = inject(src, '/* __AUTOGUIDE__ */', read('src/autoguide.js'));
 src = inject(src, '/* __GUIDE__ */', read('src/guide.js'));
 src = inject(src, '/* __ENGINE__ */', read('src/engine.js'));
 src = inject(src, '/* __I18N__ */', read('src/i18n.js'));

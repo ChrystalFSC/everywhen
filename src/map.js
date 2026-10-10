@@ -11,7 +11,7 @@ const spotLL = (it, k) => COORDS[`s-${it.id}-${k}`] || null;
 function itemPoint(it) {
   if (!it) return null;
   if (it.custom) return it.ll || null;
-  if (it.k === 'place') return COORDS[it.id] || null;
+  if (it.k === 'place' || it.auto) return COORDS[it.id] || null;
   const k = (it.spots || []).findIndex((s, i) => spotLL(it, i));
   return k < 0 ? null : { ll: spotLL(it, k), spot: it.spots[k] };
 }
@@ -46,12 +46,12 @@ function renderExploreMap(list, kind) {
   xLayer.clearLayers(); xMarkers = {};
   const planned = new Set(Object.values(plan.items).flat()), pts = [];
   list.forEach((it, i) => {
-    const spots = it.custom ? [[it.ll, null]] : kind === 'place' ? [[COORDS[it.id], null]] : (it.spots || []).map((s, k) => [spotLL(it, k), s]);
+    const spots = it.custom ? [[it.ll, null]] : kind === 'place' || it.auto ? [[COORDS[it.id], null]] : (it.spots || []).map((s, k) => [spotLL(it, k), s]);
     spots.filter(([ll]) => ll).forEach(([ll, s], j) => {
       const mk = L.marker(ll, { icon: mkPin(i + 1, `${it.custom ? 'mine' : 't' + it.tier}${planned.has(it.id) ? ' planned' : ''}${j ? ' alt' : ''}`), title: `${i + 1}. ${it.custom ? it.n : nameOf(it)}`, keyboard: true, riseOnHover: true }).addTo(xLayer);
       const nm = it.custom ? (LANG === 'zh' && it.l && hasCJK(it.l) ? it.l : it.n) : nameOf(it), ic = it.custom ? MINE_CITY(it.c) : it.c;
-      const sub = it.custom ? esc(it.info?.kind ? kindLabel(it.info.kind) : t('Your place')) + ' · ' + fmtHrs(it.hrs || 1.5) : s ? `${esc(LANG === 'zh' && it.c !== 'han' && it.c !== 'sgn' ? s.l : s.n)} · ${priceText(it.c, s.p, it.unit)}` : esc(t(WHEN_LABEL[it.when])) + ' · ' + fmtHrs(it.hrs);
-      mk.bindPopup(`<div class="pop"><b>${i + 1}. ${esc(nm)}</b><span>${sub}</span><div class="pop-acts"><button type="button" data-card="${esc(it.id)}">${t('See details')}</button><a href="${mapLink(ic, s ? s.l : (it.l || it.n), ll)}" target="_blank" rel="noopener">${t(CITIES[ic]?.lang === 'vi' ? 'Open in Google Maps' : 'Open in Amap')}</a></div></div>`);
+      const sub = it.custom ? esc(it.info?.kind ? kindLabel(it.info.kind) : t('Your place')) + ' · ' + fmtHrs(it.hrs || 1.5) : s ? `${esc(LANG === 'zh' && it.c !== 'han' && it.c !== 'sgn' ? s.l : s.n)} · ${priceText(it.c, s.p, it.unit)}` : it.auto && it.k !== 'place' ? esc(it.price || t(it.k === 'food' ? 'Food' : 'Souvenirs')) : esc(t(WHEN_LABEL[it.when])) + ' · ' + fmtHrs(it.hrs);
+      mk.bindPopup(`<div class="pop"><b>${i + 1}. ${esc(nm)}</b><span>${sub}</span><div class="pop-acts"><button type="button" data-card="${esc(it.id)}">${t('See details')}</button><a href="${mapLink(ic, s ? s.l : (it.l || it.n), ll)}" target="_blank" rel="noopener">${t(CITIES[ic]?.lang === 'zh' ? 'Open in Amap' : 'Open in Google Maps')}</a></div></div>`);
       (xMarkers[it.id] ||= []).push(mk); pts.push(ll);
     });
   });

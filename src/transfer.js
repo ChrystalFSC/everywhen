@@ -9,7 +9,7 @@ const unb64u = s => { const t = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '
 async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
 // Everything saved, for every trip: trips, the open trip, and each trip's plan, stays, notes and so on.
 // Caches that the app can rebuild (forecasts, translations, last year's weather) stay behind.
-const XFER_SKIP = /(^|:)(wx|clim|trcache|tab)$/;
+const XFER_SKIP = /(^|:)(wx|clim|trcache|tab)$|^guide:/;
 function xferData() {
   const data = {};
   try { Object.keys(localStorage).filter(k => k.startsWith('everywhen:')).map(k => k.slice(10)).filter(k => !XFER_SKIP.test(k)).forEach(k => { const v = store.get(k, undefined); if (v !== undefined) data[k] = v; }); } catch {}

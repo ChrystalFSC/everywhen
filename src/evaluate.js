@@ -7,6 +7,7 @@
    Verdicts weigh travel time, time needed, free hours per day, stops already planned nearby, weekends,
    the Lantern Festival, the hotel move, opening days and the short Hanoi / Ho Chi Minh City stops. */
 const COORDS = __COORDS__;
+Object.assign(COORDS, AG_LL);
 // Centres of the cities in this trip. The main base is where the longest stay is.
 const LL = PRE ? { sh:[31.2304, 121.4737], han:[21.0285, 105.8542], sgn:[10.7725, 106.698] } : Object.fromEntries((STOP_KEYS.length ? STOP_KEYS : [ckey(LAST.to)]).map(k => [k, ptOf(KEY_CODE[k])]));
 const MAIN_KEY = PRE ? 'sh' : MAIN ? ckey(MAIN.code) : Object.keys(LL)[0];

@@ -26,7 +26,11 @@ From those flights alone the app works out everything else:
 - **Clocks, currencies, languages and emergency numbers** come from each country, and the checklist is built from the destinations (entry rules, passport validity, unbooked nights, transfers, China's apps and payments, Grab in Southeast Asia).
 - **Weather:** where the guide has no hand-written climate notes, last year's weather on the same dates (Open-Meteo archive) stands in, with packing suggestions.
 
-Each trip keeps its own plan, stays, notes, checklist and saved forecasts. Switching trips reloads the app around the chosen one. Places, food and souvenirs are hand-picked only for the example's cities so far; elsewhere, places you add with **Can I go to…?** appear in Explore with their details.
+Each trip keeps its own plan, stays, notes, checklist and saved forecasts. Switching trips reloads the app around the chosen one. Places, food and souvenirs are hand-picked for the example's cities. Every other city gets a guide built from Wikivoyage the first time the app is online (see below), and places you add with **Can I go to…?** appear in Explore with their details.
+
+### Guides for any city
+
+For a city without a hand-picked guide, Everywhen reads its [Wikivoyage](https://en.wikivoyage.org) article (and its district or town pages) and turns the listings into Explore cards: sights, restaurants, shops, areas to stay and safety advice. Sights are ranked by how widely known they are (the number of Wikipedia language editions covering them, from Wikidata), not by invented scores. Photos come from Wikimedia Commons with author and licence credits. The plan fills itself from the guide, grouping nearby places on the same day. The guide is built once per city in about 20 seconds, saved on the device so it works offline, and can be rebuilt with **Update** in Explore. Wikivoyage text is CC BY-SA and is credited on the page. Wikimedia sites are blocked in mainland China, so build guides before you fly there.
 
 ## What's inside
 
@@ -94,6 +98,7 @@ Then open http://localhost:8765. The service worker also runs on `localhost`.
 | `data/airports.json` | Every airport with an IATA code: city, country, position, time zone ([mwgg/Airports](https://github.com/mwgg/Airports), MIT). Built by `scripts/make-airports.js`; loaded only when the trip form opens |
 | `src/guide-data.js` | Cities, ranked places and food, things to skip, where to stay |
 | `src/guide.js` | Smart planner and Explore |
+| `src/autoguide.js` | Guides for any city, built from Wikivoyage, Wikidata and Wikimedia Commons |
 | `src/translate.js` | Type-or-speak translator |
 | `src/evaluate.js`, `src/places-data.js` | “Can I go to…?” place checker and its offline destination list |
 | `src/i18n.js`, `data/zh.tsv` | English/Chinese switching and the Chinese dictionary |

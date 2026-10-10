@@ -1535,3 +1535,21 @@ Hindi	印地语
 Greek	希腊语
 Cantonese	粤语
 English	英语
+Update	更新
+Budget	平价
+Mid-range	中档
+Splurge	高档
+Entry	门票
+Stay safe in {city}	{city}安全须知
+Read the area guide	查看这一区的指南
+Markets, malls and shops picked by Wikivoyage’s writers.	Wikivoyage 作者推荐的市场、商场和商店。
+Areas of {city} to stay in.	{city}适合住宿的区域。
+Safety advice and common scams in {city}, from Wikivoyage.	来自 Wikivoyage 的{city}安全建议和常见骗局。
+You have <b>1 night</b> in {city}.	你在{city}住<b>1晚</b>。
+You have <b>{n} nights</b> in {city}.	你在{city}住<b>{n}晚</b>。
+Guide from <a href="{url}" target="_blank" rel="noopener">Wikivoyage</a> (CC BY-SA) with photos from Wikimedia Commons, built {date}.	指南来自 <a href="{url}" target="_blank" rel="noopener">Wikivoyage</a>（CC BY-SA），照片来自 Wikimedia Commons，生成于{date}。
+Building a guide for {city} from Wikivoyage, the free travel guide. This takes about 20 seconds.	正在根据免费旅行指南 Wikivoyage 生成{city}的指南，大约需要20秒。
+Wikivoyage has no guide for {city} yet. Add places with <b>Can I go to…?</b> on the Plan tab and they appear here with photos and details.	Wikivoyage 还没有{city}的指南。在“计划”页用<b>我能去…吗？</b>添加地点，它们会带着照片和详情出现在这里。
+Couldn’t build a guide for {city}. Wikivoyage may be blocked on this network, as it is in China. It will try again next time you’re online.	无法生成{city}的指南。当前网络可能屏蔽了 Wikivoyage（在中国就是如此）。下次联网时会再试。
+A guide for {city} is built the first time you open Everywhen with internet. Until then, add places with <b>Can I go to…?</b> on the Plan tab.	第一次联网打开 Everywhen 时会生成{city}的指南。在此之前，可以在“计划”页用<b>我能去…吗？</b>添加地点。
+Sights are sorted by how widely known they are around the world: ★ Top pick, then Worth it, then If you have time. Restaurants and shops keep the order Wikivoyage’s writers gave them. Places you added yourself come first, marked Yours.	景点按全球知名度排序：★ 必去，其次是值得一去，再次是有空再去。餐厅和商店保持 Wikivoyage 作者的顺序。你自己添加的地点排在最前，标为“我的”。
