@@ -170,6 +170,10 @@ __STYLES__
           <div><b id="progText">0 of 0</b><div class="hint" id="progSub">ready</div></div>
         </div>
         <div class="checks" id="checks"></div>
+        <div class="xfer-card glass">
+          <div><b>Use Everywhen on another device</b><p>Your plan, hotels, places and notes are saved only on this device. Copy them to your phone with a link, QR code or file.</p></div>
+          <button class="btn" type="button" data-xfer>Move to another device</button>
+        </div>
         <p class="footer-note">Everywhen runs entirely inside this one file. Its fonts and map are built in, and it loads nothing from Google or any other service, so it keeps working on Chinese networks and with no signal. Your ticks and notes stay on this device only.</p>
       </section>
 
@@ -222,6 +226,26 @@ __STYLES__
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <!-- Show overlay -->
+<dialog class="dlg" id="xferDlg" aria-labelledby="xferT">
+  <div class="xfer">
+    <h2 id="xferT">Move to another device</h2>
+    <p class="hint">Copies your plan, hotels, your own places, notes, checklist and settings. Nothing is uploaded: the data travels inside the link or file itself.</p>
+    <section class="xfer-sec" id="xferSend">
+      <h3>Send from this device</h3>
+      <p class="xfer-sum" id="xferSum"></p>
+      <div class="xfer-qr" id="xferQR"></div>
+      <p class="hint" id="xferQRNote"></p>
+      <div class="acts"><button class="btn" type="button" id="xferCopy">Copy link</button><button class="btn ghost" type="button" id="xferShare" hidden>Share…</button><button class="btn ghost" type="button" id="xferFile">Save as file</button></div>
+    </section>
+    <section class="xfer-sec">
+      <h3>Receive on this device</h3>
+      <div class="field"><label for="xferIn">Paste a link or code</label><textarea id="xferIn" spellcheck="false" autocomplete="off" placeholder="https://chrystalfsc.github.io/everywhen/#import=…"></textarea></div>
+      <div class="acts"><button class="btn" type="button" id="xferLoad">Check it</button><label class="btn ghost xfer-file">Open a file<input type="file" id="xferFileIn" accept=".json,application/json"></label></div>
+      <div id="xferPreview" aria-live="polite"></div>
+    </section>
+    <div class="dlg-acts"><button class="btn ghost" type="button" id="xferClose">Close</button></div>
+  </div>
+</dialog>
 <dialog class="dlg" id="stayDlg" aria-labelledby="stayDlgT">
   <form id="stayForm" novalidate>
     <h2 id="stayDlgT">Add a stay</h2>
@@ -261,6 +285,7 @@ __STYLES__
 </div>
 
 <script>/* __LEAFLET__ */</script>
+<script>/* __QRCODE__ */</script>
 <script>
 (() => {
 'use strict';
@@ -1149,6 +1174,7 @@ bindSeg('#wCity', v => { wCity = v; renderWeather(); });
 /* __EVALUATE__ */
 /* __MAP__ */
 /* __MINE__ */
+/* __TRANSFER__ */
 /* __TRANSLATE__ */
 
 /* ---------------- tabs ---------------- */
@@ -1202,5 +1228,6 @@ selectTab(initial);
 addEventListener('hashchange', () => { const h = location.hash.slice(1); if (TABS.includes(h) && h !== app.dataset.tab) selectTab(h); });
 fit(); kick();
 i18nStart();
+checkImportLink();
 })();
 </script>

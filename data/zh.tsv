@@ -1330,3 +1330,45 @@ Nothing here yet.	这里还没有内容。
 Places you add in {city} with Can I go to…? on the Plan tab will appear here with their details.	在“计划”页用“我能去…吗？”添加的{city}地点，会连同详情出现在这里。
 Your own day trip to {city}. Places you add there appear here with their details.	你自己安排的{city}一日游。在那里添加的地点会连同详情出现在这里。
 Places you added yourself come first, marked Yours. The rest are our editors’ picks, not live star ratings.	你自己添加的地点排在最前，标有“我的”。其余是编辑精选，并非实时评分。
+1 stay	1段住宿
+{n} stays	{n}段住宿
+1 plan stop	1个行程点
+{n} plan stops	{n}个行程点
+1 place of your own	1个自己添加的地点
+{n} places of your own	{n}个自己添加的地点
+1 note	1条备注
+{n} notes	{n}条备注
+{n} checklist items done	清单已完成{n}项
+QR code with your trip data	包含行程数据的二维码
+On this device: {list}	此设备上：{list}
+nothing yet	暂无
+Scan this with your iPhone camera, or use Copy link and send it to yourself.	用 iPhone 相机扫描，或点“复制链接”发给自己。
+Your trip is too big for one QR code. Use Copy link and send it to yourself (WhatsApp, Telegram or email), or Save as file.	行程数据太多，放不进一个二维码。请点“复制链接”发给自己（WhatsApp、Telegram 或邮件），或“保存为文件”。
+On iPhone, the home-screen app keeps its own data, separate from Safari. To load this into the home-screen app instead, tap Copy code, open Everywhen from your home screen, choose Move to another device, and paste it there.	在 iPhone 上，主屏幕应用和 Safari 的数据是分开的。要导入到主屏幕应用，请点“复制代码”，从主屏幕打开 Everywhen，选择“转移到其他设备”，然后粘贴。
+Copy code	复制代码
+Trip data saved {when}	行程数据保存于 {when}
+No trip data in it.	里面没有行程数据。
+Importing replaces what’s on this device now:	导入会替换此设备上现有的数据：
+Replace my data	替换我的数据
+This browser is too old to read compressed trip data. Update iOS or use Save as file instead.	此浏览器版本太旧，无法读取压缩的行程数据。请更新 iOS，或改用“保存为文件”。
+That isn’t an Everywhen link or code. Copy the whole link and try again.	这不是 Everywhen 的链接或代码。请复制完整链接后重试。
+Copy didn’t work here. The text is selected below; copy it yourself.	这里无法自动复制。文字已在下方选中，请手动复制。
+Link copied. Send it to yourself and open it on your phone.	链接已复制。发给自己，然后在手机上打开。
+My Everywhen trip data	我的 Everywhen 行程数据
+Saved. Open the file in Everywhen on the other device with Open a file.	已保存。在另一台设备的 Everywhen 里用“打开文件”导入。
+Code copied. Open Everywhen from your home screen and paste it in Move to another device.	代码已复制。从主屏幕打开 Everywhen，在“转移到其他设备”里粘贴。
+Trip data imported.	行程数据已导入。
+Import trip data	导入行程数据
+Move to another device	转移到其他设备
+Use Everywhen on another device	在其他设备上使用 Everywhen
+Your plan, hotels, places and notes are saved only on this device. Copy them to your phone with a link, QR code or file.	你的行程、住宿、地点和备注只保存在这台设备上。可用链接、二维码或文件复制到手机。
+Copies your plan, hotels, your own places, notes, checklist and settings. Nothing is uploaded: the data travels inside the link or file itself.	复制你的行程、住宿、自己添加的地点、备注、清单和设置。不会上传任何内容：数据就在链接或文件里。
+Send from this device	从这台设备发送
+Receive on this device	在这台设备上接收
+Paste a link or code	粘贴链接或代码
+Copy link	复制链接
+Share…	分享…
+Save as file	保存为文件
+Check it	检查
+Open a file	打开文件
+Close	关闭

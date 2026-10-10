@@ -23,6 +23,9 @@ src = inject(src, '/* __PLACES__ */', read('src/places-data.js'));
 src = inject(src, '/* __EVALUATE__ */', read('src/evaluate.js'));
 src = inject(src, '/* __MAP__ */', read('src/map.js'));
 src = inject(src, '/* __MINE__ */', read('src/mine.js'));
+src = inject(src, '/* __TRANSFER__ */', read('src/transfer.js'));
+// qrcode-generator (MIT, Kazuhiko Arase) for the Move to another device QR code
+src = inject(src, '/* __QRCODE__ */', read('data/vendor/qrcode.js'));
 const zh = {};
 read('data/zh.tsv').split(/\r?\n/).forEach(line => { if (!line || line.startsWith('#')) return; const i = line.indexOf('\t'); if (i > 0) zh[line.slice(0, i)] = line.slice(i + 1); });
 src = inject(src, '__ZH__', JSON.stringify(zh));
