@@ -15,6 +15,7 @@ let src = read('src/everywhen.html');
 // Leaflet (BSD-2-Clause) is bundled so maps need no CDN; its CSS goes first so ours can override it.
 src = inject(src, '__STYLES__', read('data/vendor/leaflet.css') + '\n' + styles);
 src = inject(src, '/* __LEAFLET__ */', read('data/vendor/leaflet.js').replace(/\/\/# sourceMappingURL=.*$/m, ''));
+src = inject(src, '/* __TRIP__ */', read('src/trip.js'));
 src = inject(src, '/* __GUIDE_DATA__ */', read('src/guide-data.js'));
 src = inject(src, '/* __GUIDE__ */', read('src/guide.js'));
 src = inject(src, '/* __ENGINE__ */', read('src/engine.js'));

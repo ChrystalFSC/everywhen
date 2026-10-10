@@ -3,6 +3,8 @@
    have viewed, so maps you've looked at once still work offline; pins and routes always draw, tiles or not. */
 const HAS_MAP = typeof L !== 'undefined';
 const MAP_CENTRE = { sh:[31.2304, 121.4737, 12], sz:[31.3100, 120.6100, 13], hz:[30.2500, 120.1500, 12], han:[21.0300, 105.8450, 14], sgn:[10.7760, 106.7000, 14] };
+// Map centre for any city key: the guide's own view, the trip's city centre, or home.
+const centreOf = k => MAP_CENTRE[k] || (LL[k] ? [LL[k][0], LL[k][1], 12] : [...ptOf(HOME.code), 11]);
 const CITY_ZH = { sh:'上海', sz:'苏州', hz:'杭州' };
 const spotLL = (it, k) => COORDS[`s-${it.id}-${k}`] || null;
 // Where an item sits on the map: a place's own point, or a dish or souvenir's best-ranked shop.
@@ -29,7 +31,7 @@ const mapLink = (c, name, ll) => CITIES[c]?.lang === 'zh'
 const staysIn = c => myStays.filter(x => x.ll && x.city === c);
 function hotelMarker(x, layer) {
   const mk = L.marker(x.ll, { icon: mkPin(houseSvg, 'hotel'), title: x.name, keyboard: true, zIndexOffset: 500 }).addTo(layer);
-  mk.bindPopup(`<div class="pop"><span class="pop-k">${t('Your stay')}</span><b>${esc(x.name)}</b><a href="${mapLink(x.city, x.name, x.ll)}" target="_blank" rel="noopener">${t(stayLang(x.city) === 'zh' ? 'Open in Amap' : 'Open in Google Maps')}</a></div>`);
+  mk.bindPopup(`<div class="pop"><span class="pop-k">${t('Your stay')}</span><b>${esc(x.name)}</b><a href="${mapLink(x.city, x.name, x.ll)}" target="_blank" rel="noopener">${t(ccOfKey(x.city) === 'CN' ? 'Open in Amap' : 'Open in Google Maps')}</a></div>`);
   return x.ll;
 }
 
@@ -54,7 +56,7 @@ function renderExploreMap(list, kind) {
     });
   });
   staysIn(xCity).forEach(x => pts.push(hotelMarker(x, xLayer)));
-  const [la, lo, z] = MAP_CENTRE[xCity] || MAP_CENTRE.sh;
+  const [la, lo, z] = centreOf(xCity);
   // Frame the main cluster; far-out picks (a water town, Disneyland) keep their pins but don't zoom the map out.
   const mid = [med(pts.map(p => p[0])), med(pts.map(p => p[1]))], core = pts.filter(p => km(p, mid) <= 9);
   const view = core.length >= 2 ? core : pts;
@@ -123,7 +125,7 @@ function drawDayMap(d) {
     const it = getItem(id), p = itemPoint(it), ll = pointLL(p); if (!ll) return;
     const name = it.custom ? it.n : nameOf(it) + (p.spot ? ' · ' + (LANG === 'zh' && CITIES[it.c]?.lang === 'zh' ? p.spot.l : p.spot.n) : '');
     L.marker(ll, { icon: mkPin(i + 1, `t${it.tier || 1}`), title: `${i + 1}. ${name}`, keyboard: true }).addTo(layer)
-      .bindPopup(`<div class="pop"><b>${i + 1}. ${esc(name)}</b><a href="${mapLink(it.c || 'sh', p.spot ? p.spot.l : (it.l || it.n), ll)}" target="_blank" rel="noopener">${t(CITIES[it.c]?.lang === 'vi' ? 'Open in Google Maps' : 'Open in Amap')}</a></div>`);
+      .bindPopup(`<div class="pop"><b>${i + 1}. ${esc(name)}</b><a href="${mapLink(it.c || MAIN_KEY, p.spot ? p.spot.l : (it.l || it.n), ll)}" target="_blank" rel="noopener">${t(CITIES[it.c]?.lang === 'vi' ? 'Open in Google Maps' : 'Open in Amap')}</a></div>`);
     if (prev) rows.push(`<li><span class="lg-n">${prev.label} → ${i + 1}</span><span>${legText(legKm(prev.ll, ll))}</span></li>`);
     prev = { ll, label: String(i + 1) }; route.push(ll); stops++;
   });
@@ -133,7 +135,7 @@ function drawDayMap(d) {
   if (route.length > 1) L.polyline(route, { color: '#8B6CF0', weight: 3, opacity: .8, dashArray: '6 7' }).addTo(m);
   const missing = ids.filter(id => !pointLL(itemPoint(getItem(id)))).length;
   if (route.length > 1) m.fitBounds(route, { padding: [26, 26], maxZoom: 15 });
-  else { const c = MAP_CENTRE[plan.base[d] || DAYS.find(x => x.d === d).cities.slice(-1)[0]] || MAP_CENTRE.sh; route.length ? m.setView(route[0], 14) : m.setView([c[0], c[1]], c[2]); }
+  else { const c = centreOf(plan.base[d] || DAYS.find(x => x.d === d).cities.slice(-1)[0]); route.length ? m.setView(route[0], 14) : m.setView([c[0], c[1]], c[2]); }
   const total = routeLen(route), opt = bestOrder(d);
   legs.innerHTML = (rows.length ? `<ol class="legs-l">${rows.join('')}</ol><p class="legs-t">${t('Total about {km} between stops.', { km: fmtKm(total) })}</p>` : `<p class="legs-t">${t(ids.length ? 'Add another stop to see distances between them.' : 'Add stops to see them on the map.')}</p>`)
     + (missing ? `<p class="legs-t">${t(missing === 1 ? '1 stop has no map location.' : '{n} stops have no map location.', { n: missing })}</p>` : '')
@@ -152,7 +154,7 @@ document.addEventListener('click', e => {
 /* ---------- your stays: found from the address, or placed by tapping the map ---------- */
 // OpenStreetMap rarely knows Chinese house numbers, so fall back to the street, then the name.
 async function findStayPlace(x) {
-  const city = CITY_ZH[x.city] || CITY_N[x.city], [la, lo] = MAP_CENTRE[x.city] || MAP_CENTRE.sh;
+  const city = CITY_ZH[x.city] || CITY_N[x.city], [la, lo] = centreOf(x.city);
   const road = (x.addr || '').replace(/^(上海市?|苏州市?|杭州市?)/, '').replace(/^[^区县]{1,4}[区县]/, '').match(/^(.+?[路街道巷弄])/)?.[1];
   const qs = [[x.addr, true], [road && road + ' ' + city, false], [x.name && x.name + ' ' + city, true]].filter(q => q[0]);
   for (const [q, exact] of qs) {
@@ -178,7 +180,7 @@ function stayMapOpen(ll, city) {
     sMap.invalidateSize();
     if (sMark) { sMark.remove(); sMark = null; }
     if (sLL) { setStayPin(sLL, t('This is where your stay is pinned. Tap the map or drag the pin to move it.')); sMap.setView(sLL, 15); }
-    else { const c = MAP_CENTRE[city] || MAP_CENTRE.sh; sMap.setView([c[0], c[1]], c[2]); $('#sMapHint').textContent = t('Tap the map to pin your stay, or use Find on map.'); }
+    else { const c = centreOf(city); sMap.setView([c[0], c[1]], c[2]); $('#sMapHint').textContent = t('Tap the map to pin your stay, or use Find on map.'); }
   });
 }
 function setStayPin(ll, msg) {
@@ -198,4 +200,4 @@ $('#sFind')?.addEventListener('click', async () => {
   } catch { $('#sMapHint').textContent = t(navigator.onLine === false ? 'You’re offline. Tap the map to pin it instead.' : 'Couldn’t reach the map search. Tap the map to pin it instead.'); }
   b.disabled = false;
 });
-$('#sCity')?.addEventListener('change', () => { if (!sLL && sMap) { const c = MAP_CENTRE[$('#sCity').value]; sMap.setView([c[0], c[1]], c[2]); } });
+$('#sCity')?.addEventListener('change', () => { if (!sLL && sMap) { const c = centreOf($('#sCity').value); sMap.setView([c[0], c[1]], c[2]); } });

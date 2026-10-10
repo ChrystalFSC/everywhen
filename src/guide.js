@@ -1,7 +1,8 @@
 /* ================= Smart planner + Explore ================= */
 const PHOTOS = __PHOTOS__;
+// Cities in this trip that the guide doesn't cover yet get a plain entry, so every tab can name them.
+Object.values(CITY).forEach(c => { const k = ckey(c.code); if (!CITIES[k]) CITIES[k] = { n: c.city, l: c.city, lang: /^zh/.test(langOf(c.cc)) ? 'zh' : langOf(c.cc), kind: 'base', cc: c.cc, own: true }; });
 const CITYN = Object.fromEntries(Object.entries(CITIES).map(([k, v]) => [k, v.n]));
-const CKEY = { KUL:'kul', SGN:'sgn', HAN:'han', PVG:'sh' };
 const TIER = { 3:['Top pick','top'], 2:['Worth it','worth'], 1:['If you have time','maybe'] };
 const WHEN_LABEL = { morning:'Morning', afternoon:'Afternoon', evening:'Evening', any:'Any time', half:'Half day', full:'Full day' };
 const PACE = { relaxed:6, balanced:8, packed:10 };
@@ -12,11 +13,11 @@ const hasCJK = s => /[\u3400-\u9fff]/.test(s || '');
 const nameOf = it => LANG === 'zh' && hasCJK(it.l) ? it.l : t(it.n);
 const cityName = c => t(CITYN[c]);
 const noteText = n => typeof n === 'string' ? t(n) : t(n.k, { city: n.city ? cityName(n.city) : '', day: n.d ? dayLabel(n.d) : '', list: (n.list || []).map(id => BY[id] ? nameOf(BY[id]) : id).join(LANG === 'zh' ? '、' : ', '), pace: n.pace ? t(n.pace[0].toUpperCase() + n.pace.slice(1)) : '', h: n.h || '' });
-const dayLabel = d => F('Asia/Shanghai', { weekday:'short', day:'numeric', month:'short' }).format(at(2027, 2, d, 12, 0, 8));
-const dayShort = d => F('Asia/Shanghai', { weekday:'short', day:'numeric' }).format(at(2027, 2, d, 12, 0, 8));
+const dayLabel = d => { const tz = tzOfDay(d); return F(tz, { weekday:'short', day:'numeric', month:'short' }).format(dayAt(d, tz)); };
+const dayShort = d => { const tz = tzOfDay(d); return F(tz, { weekday:'short', day:'numeric' }).format(dayAt(d, tz)); };
 /* Practical details for guide items, looked up at build time (scripts/fetch-details.js) so they work offline and in China. */
 const DETAILS = __DETAILS__;
-const CARD_NOTES = store.get('notes', {});
+const CARD_NOTES = tstore.get('notes', {});
 // OpenStreetMap opening hours ("Tu-Su 09:00-17:15; Mo off") in plain words.
 function fmtHours(h) {
   if (!h) return '';
@@ -45,15 +46,18 @@ function bindSeg(sel, cb) { $$(sel + ' button').forEach(b => b.addEventListener(
 const tipIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/></svg>';
 
 /* ---------- days ---------- */
-const CHOOSABLE = [19, 20, 21, 22, 23];
-const DAYS = [
-  { d:17, slots:[['sgn','evening',.75]], fixed:[['VN678','KUL 19:50 → SGN 21:00']] },
-  { d:18, slots:[['sh','evening',4]], fixed:[['VN524','SGN 09:20 → PVG 14:15']] },
-  { d:19 }, { d:20, note:'Lantern Festival: lanterns and big crowds, especially around Yu Garden.' },
-  { d:21 }, { d:22 }, { d:23 },
-  { d:24, slots:[['sh','morning',2.5],['han','evening',3]], fixed:[['VN533','PVG 15:25 → HAN 18:05']], note:'Leave for Pudong Airport by about 12:00.' },
-  { d:25, slots:[['han','morning',2.75]], fixed:[['VN681','HAN 14:50 → KUL 19:10']], note:'Be back at Noi Bai by 12:20.' }
-];
+const DAYS = PRE ? [
+  { d:PD(17), slots:[['sgn','evening',.75]], fixed:[['VN678','KUL 19:50 → SGN 21:00']] },
+  { d:PD(18), slots:[['sh','evening',4]], fixed:[['VN524','SGN 09:20 → PVG 14:15']] },
+  { d:PD(19), city:'sh' }, { d:PD(20), city:'sh', note:'Lantern Festival: lanterns and big crowds, especially around Yu Garden.' },
+  { d:PD(21), city:'sh' }, { d:PD(22), city:'sh' }, { d:PD(23), city:'sh' },
+  { d:PD(24), slots:[['sh','morning',2.5],['han','evening',3]], fixed:[['VN533','PVG 15:25 → HAN 18:05']], note:'Leave for Pudong Airport by about 12:00.' },
+  { d:PD(25), slots:[['han','morning',2.75]], fixed:[['VN681','HAN 14:50 → KUL 19:10']], note:'Be back at Noi Bai by 12:20.' }
+] : TRIP_DAYS.filter(x => x.city || x.slots?.length || x.fixed);
+// Days that are free from morning to night in one place: the ones that can become day trips.
+const CHOOSABLE = PRE ? [19, 20, 21, 22, 23].map(PD) : DAYS.filter(x => !x.slots && x.city).map(x => x.d);
+// Day-trip towns the guide knows, for the base cities in this trip.
+const DAYTRIP_KEYS = Object.keys(CITIES).filter(k => CITIES[k].kind === 'daytrip' && BASE_KEYS.includes('sh'));
 DAYS.forEach(x => {
   Object.defineProperty(x, 'cities', { get: () => daySlots(x).map(s => s[0]) });
   Object.defineProperty(x, 'free', { get: () => daySlots(x).reduce((a, s) => a + s[2], 0) });
@@ -61,28 +65,36 @@ DAYS.forEach(x => {
 const dayOf = d => DAYS.find(x => x.d === +d);
 function daySlots(x) {
   if (x.slots) return x.slots;
-  const b = plan.base[x.d] || 'sh', trip = CITIES[b].kind === 'daytrip';
+  const b = plan.base[x.d] || x.city || 'sh', trip = CITIES[b]?.kind === 'daytrip';
   return [[b, 'full', PACE[plan.prefs.pace] - (trip ? CITIES[b].hrs : 0)]];
 }
 
 /* ---------- plan state ---------- */
 const DEFAULT_PREFS = { pace:'balanced', interests:['history','views','food'], trips:['sz','hz'] };
-let plan = store.get('plan2', null);
-const savePlan = () => store.set('plan2', plan);
+let plan = tstore.get('plan2', null);
+const savePlan = () => tstore.set('plan2', plan);
+// The Shanghai trip used February dates (17–25) as day keys; move them to the calendar day numbers used now.
+if (PRE && plan && plan.items && Object.keys(plan.items).some(k => +k < 1000)) {
+  const mv = o => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [+k < 1000 ? PD(+k) : +k, v]));
+  plan.items = mv(plan.items); plan.base = mv(plan.base);
+  (plan.notes || []).forEach(n => { if (n && n.d && n.d < 1000) n.d = PD(n.d); });
+  savePlan();
+}
 const getItem = id => BY[id] || plan.custom[id];
 const sortKey = it => it.custom ? 5 : ({ morning: it.k === 'food' ? 0 : .5, half:1, full:1, any: it.k === 'food' ? 2.5 : 2, afternoon: it.k === 'food' ? 3.2 : 3, evening: it.k === 'food' ? 3.8 : 4 })[it.when] ?? 2;
 
 function buildPlan(prefs) {
-  const base = Object.fromEntries(CHOOSABLE.map(d => [d, 'sh']));
+  const base = Object.fromEntries(CHOOSABLE.map(d => [d, dayOf(d).city || 'sh']));
   const notes = [], used = new Set(), items = Object.fromEntries(DAYS.map(x => [x.d, []]));
   // Weekdays first for day trips; keep the Lantern Festival (20th) and the hotel move (22nd) in Shanghai.
-  const tripDays = [19, 23, 21];
-  prefs.trips.forEach((c, i) => { const d = tripDays[i]; if (!d) return; base[d] = c; notes.push({ k: d === 21 ? '{city} day trip on {day}.' : '{city} day trip on {day}, a weekday, so the famous sights are calmer.', city: c, d }); });
+  const weekday = d => { const w = new Date(d * D).getUTCDay(); return w > 0 && w < 6; };
+  const tripDays = PRE ? [19, 23, 21].map(PD) : CHOOSABLE.filter(d => dayOf(d).city === 'sh').sort((a, b) => weekday(b) - weekday(a));
+  prefs.trips.filter(c => DAYTRIP_KEYS.includes(c)).forEach((c, i) => { const d = tripDays[i]; if (!d) return; base[d] = c; notes.push({ k: weekday(d) ? '{city} day trip on {day}, a weekday, so the famous sights are calmer.' : '{city} day trip on {day}.', city: c, d }); });
   plan = { ...plan, base, prefs, custom: plan?.custom || {} };
   const score = it => it.tier * 10 + it.tags.filter(t => prefs.interests.includes(t)).length * 4;
   const fits = (it, win, budget) => win === 'full' ? it.when !== 'full' && (it.when !== 'half' || budget >= 7) : win === 'evening' ? ['evening','any'].includes(it.when) : ['morning','any'].includes(it.when);
   const take = (d, it) => { used.add(it.id); items[d].push(it.id); };
-  if (base[20] === 'sh') { take(20, BY.yuyuan); take(20, BY['f-tangyuan']); notes.push('Yu Garden on Sat 20 Feb for the Lantern Festival, with tangyuan, the festival dessert.'); }
+  if (PRE && base[PD(20)] === 'sh') { take(PD(20), BY.yuyuan); take(PD(20), BY['f-tangyuan']); notes.push('Yu Garden on Sat 20 Feb for the Lantern Festival, with tangyuan, the festival dessert.'); }
   for (const x of DAYS) {
     for (const [city, win, budget] of daySlots(x)) {
       const meals = win === 'full' ? 2 : 1;
@@ -102,26 +114,28 @@ function buildPlan(prefs) {
     }
     items[x.d].sort((a, b) => sortKey(BY[a]) - sortKey(BY[b]));
   }
-  const left = ITEMS.filter(i => i.c === 'sh' && i.k === 'place' && i.tier === 3 && !used.has(i.id));
+  const left = ITEMS.filter(i => BASE_KEYS.includes(i.c) && i.k === 'place' && i.tier === 3 && !used.has(i.id));
   if (left.length) notes.push({ k: 'Not fitted in: {list}. Add it to a lighter day, or choose a faster pace.', list: left.map(i => i.id) });
   notes.push({ k: '{pace} pace: about {h} hours of sightseeing on full days.', pace: prefs.pace, h: PACE[prefs.pace] });
   plan.items = items; plan.notes = notes; plan.dirty = false;
   savePlan();
 }
-if (!plan || plan.v !== 2) { plan = { v:2, custom:{}, prefs: { ...DEFAULT_PREFS } }; buildPlan(plan.prefs); }
+if (!plan || plan.v !== 2) { plan = { v:2, custom:{}, prefs: { ...DEFAULT_PREFS, trips: DAYTRIP_KEYS.slice() } }; buildPlan(plan.prefs); }
+DAYS.forEach(x => { plan.items[x.d] ||= []; });
 
 /* ---------- builder UI ---------- */
 function renderBuilder() {
   const p = plan.prefs;
   $('#bPace').innerHTML = ['relaxed','balanced','packed'].map(k => `<button type="button" data-v="${k}" aria-pressed="${p.pace === k}">${t(k[0].toUpperCase() + k.slice(1))}<small>${t('{h} h/day', { h: PACE[k] })}</small></button>`).join('');
   $('#bInt').innerHTML = INTERESTS.map(([k, n]) => `<button type="button" class="pick" data-v="${k}" aria-pressed="${p.interests.includes(k)}">${t(n)}</button>`).join('');
-  $('#bTrips').innerHTML = ['sz','hz'].map(k => `<button type="button" class="pick trip" data-v="${k}" aria-pressed="${p.trips.includes(k)}"><b>${t(CITIES[k].n)}</b> <span lang="zh-CN">${LANG === 'zh' ? '' : CITIES[k].l}</span><small>${t(k === 'sz' ? 'Gardens and canals · 30 min by train' : 'West Lake and tea hills · 1 h by train')}</small></button>`).join('');
+  $('#bTripsWrap').hidden = !DAYTRIP_KEYS.length;
+  $('#bTrips').innerHTML = DAYTRIP_KEYS.map(k => `<button type="button" class="pick trip" data-v="${k}" aria-pressed="${p.trips.includes(k)}"><b>${t(CITIES[k].n)}</b> <span lang="zh-CN">${LANG === 'zh' ? '' : CITIES[k].l}</span><small>${t(k === 'sz' ? 'Gardens and canals · 30 min by train' : 'West Lake and tea hills · 1 h by train')}</small></button>`).join('');
   $('#bBuild').classList.toggle('pulse', !!plan.dirty);
   $('#bNotes').innerHTML = (plan.dirty ? ['Your choices have changed. Tap Build my plan to apply them. This replaces the current stops.'] : plan.notes || []).map(n => `<li>${esc(noteText(n))}</li>`).join('');
 }
 $('#bPace').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; plan.prefs.pace = b.dataset.v; plan.dirty = true; savePlan(); renderBuilder(); renderDays(); });
 $('#bInt').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const s = new Set(plan.prefs.interests); s.has(b.dataset.v) ? s.delete(b.dataset.v) : s.add(b.dataset.v); plan.prefs.interests = [...s]; plan.dirty = true; savePlan(); renderBuilder(); });
-$('#bTrips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const s = new Set(plan.prefs.trips); s.has(b.dataset.v) ? s.delete(b.dataset.v) : s.add(b.dataset.v); plan.prefs.trips = ['sz','hz'].filter(k => s.has(k)); plan.dirty = true; savePlan(); renderBuilder(); });
+$('#bTrips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const s = new Set(plan.prefs.trips); s.has(b.dataset.v) ? s.delete(b.dataset.v) : s.add(b.dataset.v); plan.prefs.trips = DAYTRIP_KEYS.filter(k => s.has(k)); plan.dirty = true; savePlan(); renderBuilder(); });
 $('#bBuild').addEventListener('click', () => {
   buildPlan(plan.prefs); renderBuilder(); renderDays(); renderExplore();
   const n = Object.values(plan.items).flat().length;
@@ -151,10 +165,11 @@ function addOptions(x) {
 function stayNotes(d) {
   const n = [];
   myStays.forEach(x => {
-    if (x.from === d && d !== 17) n.push(t('Check in at {name}.', { name: x.name }));
-    if (x.to === d && d !== 25 && !myStays.some(y => y.from === d)) n.push(t('Check out of {name}. Bring your bags or ask the hotel to hold them.', { name: x.name }));
+    const first = DAYS[0].d, last = DAYS.at(-1).d;
+    if (x.from === d && d !== first) n.push(t('Check in at {name}.', { name: x.name }));
+    if (x.to === d && d !== last && !myStays.some(y => y.from === d)) n.push(t('Check out of {name}. Bring your bags or ask the hotel to hold them.', { name: x.name }));
   });
-  if (d === 21 && myStays.some(x => x.id === 'mido')) n.push(t('Mido Homestay free cancellation ends at 18:00 today.'));
+  if (PRE && d === PD(21) && myStays.some(x => x.id === 'mido')) n.push(t('Mido Homestay free cancellation ends at 18:00 today.'));
   return n;
 }
 function renderDays() {
@@ -172,7 +187,7 @@ function renderDays() {
     const indoor = rainy ? ITEMS.filter(i => cities.includes(i.c) && i.indoor && !items.includes(i.id)).slice(0, 2).map(i => i.n) : [];
     return `<article class="dayc${trip ? ' trip' : ''}" aria-label="${dayLabel(x.d)}">
       <div class="day-h">
-        <span class="dnum">${x.d}</span>
+        <span class="dnum">${+isoDay(x.d).slice(8)}</span>
         <span class="dmeta"><b>${dayLabel(x.d)}</b>${baseSel}</span>
         <span class="wchip" title="${esc(w.label)}">${wIcon(w.code)}${w.hi}° / ${w.lo}°${w.live ? '' : ' <span style="color:var(--dim);font-weight:500">avg</span>'}</span>
         ${nightChip}
@@ -256,7 +271,10 @@ $('#days').addEventListener('change', e => {
 });
 
 /* ---------- Explore ---------- */
-let xCity = 'sh', xKind = 'place';
+// Explore covers every city in the trip, plus the day-trip towns near a base city.
+const EXPLORE_KEYS = PRE ? ['sh', 'sz', 'hz', 'han', 'sgn'] : [...BASE_KEYS, ...DAYTRIP_KEYS, ...STOP_KEYS.filter(k => !BASE_KEYS.includes(k))];
+let xCity = EXPLORE_KEYS[0] || 'sh', xKind = 'place';
+const hasGuide = k => !!CTX[k];
 const COVER = { sh:['#9B80F5','#FFE08A'], sz:['#8B6CF0','#FFD95A'], hz:['#A58BFF','#FFF0B8'], han:['#B39BFF','#FFD95A'], sgn:['#8B6CF0','#F5C542'], stay:['#B9A5FF','#FFF6D6'], skip:['#E28AA8','#FFE3EC'] };
 function cover(it, kindKey) {
   const ph = PHOTOS[it.id];
@@ -275,9 +293,9 @@ function dayChoices(city) {
 /* Food spots: local price with a ringgit estimate, a map link (Amap in China, where Google is blocked; Google Maps in Vietnam) */
 const CUR = c => CITIES[c].lang === 'zh' ? 'CNY' : 'VND';
 function priceText(c, [lo, hi], unit = 'per person') {
-  const cur = CUR(c), r = +rates[cur], k = n => n >= 1000 ? Math.round(n / 1000) + 'k' : n;
+  const cur = CUR(c), r = cur === HOME_CUR ? 1 : +rates[cur], k = n => n >= 1000 ? Math.round(n / 1000) + 'k' : n;
   const local = cur === 'CNY' ? `¥${lo}–${hi}` : `${k(lo)}–${k(hi)} ₫`;
-  const rm = r > 0 ? ` · ≈ RM ${Math.round(lo / r)}–${Math.round(hi / r)}` : '';
+  const rm = cur !== HOME_CUR && r > 0 ? ` · ≈ ${HOME_SYM} ${Math.round(lo / r)}–${Math.round(hi / r)}` : '';
   return t('{p} ' + unit, { p: local + rm });
 }
 function mapUrl(c, s) {
@@ -300,8 +318,8 @@ function spotsHtml(it) {
 function renderExplore() {
   const kind = xKind;
   syncCityButtons();
-  const own = !CTX[xCity];
-  $('#xContext').innerHTML = own ? t('Your own day trip to {city}. Places you add there appear here with their details.', { city: esc(cityName(xCity)) }) : kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
+  const own = !hasGuide(xCity);
+  $('#xContext').innerHTML = own ? (plan.extra?.[xCity] ? t('Your own day trip to {city}. Places you add there appear here with their details.', { city: esc(cityName(xCity)) }) : t('There’s no hand-picked guide for {city} yet. Add places with <b>Can I go to…?</b> on the Plan tab and they appear here with photos and details.', { city: esc(cityName(xCity)) })) : kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
   $('#xRank').hidden = kind === 'stay' || kind === 'skip';
   const g = $('#xGrid');
   if (kind === 'stay' || kind === 'skip') renderExploreMap([], kind);
@@ -390,7 +408,8 @@ $('#xCity').addEventListener('click', e => {
 // Day trips you added yourself (e.g. Wuzhen) get their own city button once you have places there.
 function syncCityButtons() {
   const host = $('#xCity'), want = Object.keys(plan.extra || {}).filter(c => mineList().some(m => m.c === c));
-  $$('#xCity button[data-extra]').forEach(b => { if (!want.includes(b.dataset.v)) { if (xCity === b.dataset.v) { xCity = 'sh'; $('#xCity [data-v="sh"]').setAttribute('aria-pressed', 'true'); } b.remove(); } });
+  if (!host.querySelector('button:not([data-extra])')) host.innerHTML = EXPLORE_KEYS.map(k => `<button type="button" data-v="${esc(k)}" aria-pressed="${k === xCity}">${esc(cityName(k))}</button>`).join('');
+  $$('#xCity button[data-extra]').forEach(b => { if (!want.includes(b.dataset.v)) { if (xCity === b.dataset.v) { xCity = EXPLORE_KEYS[0]; $(`#xCity [data-v="${CSS.escape(xCity)}"]`)?.setAttribute('aria-pressed', 'true'); } b.remove(); } });
   want.forEach(c => { if (!host.querySelector(`[data-v="${CSS.escape(c)}"]`)) host.insertAdjacentHTML('beforeend', `<button type="button" data-v="${esc(c)}" data-extra="1" aria-pressed="${xCity === c}">${esc(cityName(c))}</button>`); });
 }
 bindSeg('#xKind', v => { xKind = v; renderExplore(); });

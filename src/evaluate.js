@@ -7,7 +7,11 @@
    Verdicts weigh travel time, time needed, free hours per day, stops already planned nearby, weekends,
    the Lantern Festival, the hotel move, opening days and the short Hanoi / Ho Chi Minh City stops. */
 const COORDS = __COORDS__;
-const LL = { sh:[31.2304, 121.4737], han:[21.0285, 105.8542], sgn:[10.7725, 106.698] };
+// Centres of the cities in this trip. The main base is where the longest stay is.
+const LL = PRE ? { sh:[31.2304, 121.4737], han:[21.0285, 105.8542], sgn:[10.7725, 106.698] } : Object.fromEntries((STOP_KEYS.length ? STOP_KEYS : [ckey(LAST.to)]).map(k => [k, ptOf(KEY_CODE[k])]));
+const MAIN_KEY = PRE ? 'sh' : MAIN ? ckey(MAIN.code) : Object.keys(LL)[0];
+const isBase = k => BASE_KEYS.includes(k) || (!BASE_KEYS.length && k === MAIN_KEY);
+const weekdayOf = d => new Date(d * D).getUTCDay();
 const SPOTS = { bund:[31.2400, 121.4900], pvg:[31.1443, 121.8083], hongqiao:[31.1945, 121.3207] };
 const HUBS = [ // bullet-train cities: typical door-to-door minutes from central Shanghai
   ['Suzhou','苏州',31.2989,120.5853,75], ['Kunshan','昆山',31.385,120.98,60], ['Wuxi','无锡',31.4912,120.3119,80], ['Changzhou','常州',31.8107,119.9741,95],
@@ -84,10 +88,12 @@ function classify(cat, type, rank) {
 }
 function travelFrom(ll) {
   let [from, d] = Object.entries(LL).map(([k, v]) => [k, km(ll, v)]).sort((a, b) => a[1] - b[1])[0];
-  if (from !== 'sh' && d > 300) { from = 'sh'; d = km(ll, LL.sh); }
-  if (from !== 'sh') return { from, dist:d, mins: d <= 30 ? 15 + d * 2.5 : 30 + d * 1.3, mode:'car' };
+  if (from !== MAIN_KEY && d > 300) { from = MAIN_KEY; d = km(ll, LL[MAIN_KEY]); }
+  // Transfer stops: short taxi rides only.
+  if (!isBase(from)) return { from, dist:d, mins: d <= 30 ? 15 + d * 2.5 : 30 + d * 1.3, mode:'car' };
   if (d <= 35) return { from, dist:d, mins: d <= 1.2 ? 15 : 15 + d * 2, mode: d <= 1.2 ? 'walk' : 'metro' };
-  const hub = HUBS.map(h => [h, km(ll, [h[2], h[3]])]).sort((a, b) => a[1] - b[1])[0];
+  // Shanghai's bullet-train towns have known door-to-door times.
+  const hub = from === 'sh' ? HUBS.map(h => [h, km(ll, [h[2], h[3]])]).sort((a, b) => a[1] - b[1])[0] : null;
   if (hub && hub[1] <= 30) return { from, dist:d, mins: hub[0][4] + 10 + hub[1] * 2.2, mode:'train', hub: hub[0] };
   if (d <= 180) return { from, dist:d, mins: 25 + d * 1.25, mode: d <= 70 ? 'car' : 'bus' };
   if (d <= 1300) return { from, dist:d, mins: 60 + d / 220 * 60, mode:'train' };
@@ -118,36 +124,39 @@ async function geocode(q) {
 let acCtl = null;
 async function photon(q) {
   acCtl?.abort(); acCtl = new AbortController();
-  const res = await fetch(`https://photon.komoot.io/api/?limit=6&lat=31.23&lon=121.47&q=${encodeURIComponent(q)}`, { signal: acCtl.signal });
+  const res = await fetch(`https://photon.komoot.io/api/?limit=6&lat=${LL[MAIN_KEY][0]}&lon=${LL[MAIN_KEY][1]}&q=${encodeURIComponent(q)}`, { signal: acCtl.signal });
   return (await res.json()).features.map(f => fromOSM({ ...f, properties: f.properties, geometry: f.geometry, category: f.properties.osm_key, type: f.properties.osm_value, place_rank: f.properties.type === 'city' ? 16 : 30 }));
 }
 
 /* ---------- judging ---------- */
 const freeLeft = d => { const x = dayOf(d); return x.free - (plan.items[d] || []).reduce((a, id) => a + (getItem(id)?.hrs || 0), 0); };
 const itemLL = id => COORDS[id] || plan.custom[id]?.ll || null;
-function nearbyPlanned(ll, city = 'sh') {
+function nearbyPlanned(ll, city = MAIN_KEY) {
   if (!ll) return [];
   return DAYS.filter(x => x.cities.includes(city)).flatMap(x => (plan.items[x.d] || []).map(id => { const c = itemLL(id); return c ? { d: x.d, it: getItem(id), dist: km(ll, c) } : null; })).filter(Boolean).sort((a, b) => a.dist - b.dist);
 }
-function bestShanghaiDay(need, pref, ll, avoid = []) {
-  const days = [18, ...CHOOSABLE, 24].filter(d => dayOf(d).cities.includes('sh') && !avoid.includes(d));
+// The best day in a city: the day you asked about if it has room, a day with something planned nearby, or the emptiest.
+function bestShanghaiDay(need, pref, ll, avoid = [], city = MAIN_KEY) {
+  const days = DAYS.filter(x => x.cities.includes(city) && !avoid.includes(x.d)).map(x => x.d);
   if (pref && days.includes(+pref) && freeLeft(pref) >= need - .25) return { day: +pref };
-  const close = nearbyPlanned(ll).find(n => n.dist <= 2.5 && days.includes(n.d) && freeLeft(n.d) >= need - .25);
+  const close = nearbyPlanned(ll, city).find(n => n.dist <= 2.5 && days.includes(n.d) && freeLeft(n.d) >= need - .25);
   if (close) return { day: close.d, near: close };
-  const penalty = d => (d === 22 ? 3 : 0) + (d === 20 ? 1 : 0) + (d === 18 || d === 24 ? 1.5 : 0);
-  return { day: days.map(d => [d, Math.min(freeLeft(d), need + 2) - penalty(d)]).sort((a, b) => b[1] - a[1])[0]?.[0] || 19 };
+  const first = DAYS[0].d, last = DAYS.at(-1).d;
+  const penalty = d => PRE ? (d === PD(22) ? 3 : 0) + (d === PD(20) ? 1 : 0) + (d === PD(18) || d === PD(24) ? 1.5 : 0) : (d === first || d === last ? 1.5 : 0);
+  return { day: days.map(d => [d, Math.min(freeLeft(d), need + 2) - penalty(d)]).sort((a, b) => b[1] - a[1])[0]?.[0] || days[0] || DAYS[0].d };
 }
 function bestTripDay(pref, avoid = []) {
-  const order = [19, 23, 21, 22, 20].filter(d => !avoid.includes(d)), free = order.filter(d => (plan.base[d] || 'sh') === 'sh');
+  const order = (PRE ? [19, 23, 21, 22, 20].map(PD) : CHOOSABLE).filter(d => !avoid.includes(d)), free = order.filter(d => (plan.base[d] || dayOf(d).city) === dayOf(d).city);
   if (pref && CHOOSABLE.includes(+pref)) return +pref;
-  return free.sort((a, b) => (plan.items[a].length - plan.items[b].length) || (order.indexOf(a) - order.indexOf(b)))[0] || order[0] || 19;
+  return free.sort((a, b) => ((plan.items[a] || []).length - (plan.items[b] || []).length) || (order.indexOf(a) - order.indexOf(b)))[0] || order[0] || CHOOSABLE[0] || DAYS[0].d;
 }
-function dayNotes(d, outdoor) {
+function dayNotes(d, outdoor, city = MAIN_KEY) {
   const n = [];
-  if (d === 20) n.push(t('Sat 20 Feb is the Lantern Festival, so expect big crowds everywhere.'));
-  else if (d === 21) n.push(t('Sunday: popular sights are much busier at weekends.'));
+  if (PRE && d === PD(20)) n.push(t('Sat 20 Feb is the Lantern Festival, so expect big crowds everywhere.'));
+  else if (PRE && d === PD(21)) n.push(t('Sunday: popular sights are much busier at weekends.'));
+  else if (!PRE && (weekdayOf(d) === 0 || weekdayOf(d) === 6)) n.push(t('A weekend day, so popular sights will be busier.'));
   myStays.filter(x => x.from === d).forEach(x => n.push(t('You check in at {name} that day, so allow time for it.', { name: x.name })));
-  const w = dayWx('sh', d); if (outdoor && w.live && w.p >= 60) n.push(t('Rain is likely that day ({p}%).', { p: w.p }));
+  const w = dayWx(city, d); if (outdoor && w.live && w.p >= 60) n.push(t('Rain is likely that day ({p}%).', { p: w.p }));
   return n;
 }
 const closedMonday = h => /\bMo\b[^;]*\b(off|closed)\b/i.test(h) || /^\s*Tu-Su\b/i.test(h);
@@ -155,40 +164,45 @@ function assess(m, pref) {
   if (m.kind === 'skip') return { level:'skip', name: m.s.n, local: m.s.l, city: m.c, reasons:[t(m.s.why)], instead: m.s.instead, src:'guide' };
   if (m.kind === 'item') {
     const it = m.it, c = it.c;
-    if (c === 'han' || c === 'sgn') {
-      const d = dayOf(c === 'han' ? (it.when === 'morning' ? 25 : 24) : 17), slot = daySlots(d).find(s => s[0] === c), ok = it.hrs <= slot[2];
+    if (PRE ? c === 'han' || c === 'sgn' : !isBase(c) && CITIES[c]?.kind !== 'daytrip') {
+      const d = PRE ? dayOf(c === 'han' ? (it.when === 'morning' ? PD(25) : PD(24)) : PD(17)) : DAYS.find(x => daySlots(x).some(s => s[0] === c)) || DAYS[0], slot = daySlots(d).find(s => s[0] === c) || [c, 'any', 0], ok = it.hrs <= slot[2];
       return { level: ok ? 'good' : 'no', name: it.n, local: it.l, city: c, item: it, day: d.d, src:'guide', reasons: [ok ? t('Fits your {city} stop on {day}.', { city: cityName(c), day: dayLabel(d.d) }) : t('Your {city} stop is too short for this.', { city: cityName(c) })] };
     }
     const planned = DAYS.find(x => (plan.items[x.d] || []).includes(it.id));
     if (planned) return { level: 'great', name: it.n, local: it.l, city: c, item: it, day: planned.d, src:'guide', already: true, reasons: [t(TIER[it.tier][0]) + ' · ' + t(it.why), t('Already in your plan on {day}.', { day: dayLabel(planned.d) })] };
     const trip = CITIES[c].kind === 'daytrip';
-    const pick = trip ? { day: Object.keys(plan.base).map(Number).find(d => plan.base[d] === c) || bestTripDay(pref) } : bestShanghaiDay(it.hrs, pref, COORDS[it.id]);
-    const reasons = [t(TIER[it.tier][0]) + ' · ' + t(it.why), trip ? t('A day trip from Shanghai: {train}', { train: t(CITIES[c].train) }) : t('In Shanghai, so it fits into any day with time to spare.')];
+    const pick = trip ? { day: Object.keys(plan.base).map(Number).find(d => plan.base[d] === c) || bestTripDay(pref) } : bestShanghaiDay(it.hrs, pref, COORDS[it.id], [], c);
+    const reasons = [t(TIER[it.tier][0]) + ' · ' + t(it.why), trip ? t('A day trip from Shanghai: {train}', { train: t(CITIES[c].train) }) : c === 'sh' ? t('In Shanghai, so it fits into any day with time to spare.') : t('In {city}, so it fits into any day there with time to spare.', { city: cityName(c) })];
     if (pick.near && pick.near.it.id !== it.id) reasons.push(t('{dist} from {place}, already on {day}, so do them together.', { dist: fmtKm(pick.near.dist), place: nameOf(pick.near.it), day: dayLabel(pick.near.d) }));
-    return { level: it.tier === 3 || trip ? 'great' : 'good', name: it.n, local: it.l, city: c, item: it, day: pick.day, need: it.hrs, src:'guide', reasons: [...reasons, ...dayNotes(pick.day, !it.indoor)] };
+    return { level: it.tier === 3 || trip ? 'great' : 'good', name: it.n, local: it.l, city: c, item: it, day: pick.day, need: it.hrs, src:'guide', reasons: [...reasons, ...dayNotes(pick.day, !it.indoor, trip ? MAIN_KEY : c)] };
   }
   const p = m.p || m.live, live = !!m.live;
   if (live && p.stay) return assessStay(p);
   const each = p.mins, round = each * 2 / 60, need = round + p.hrs, pace = PACE[plan.prefs.pace];
   const base = { name: p.n, local: p.zh || '', city: p.from, place: p, facts: { each, hrs: p.hrs, mode: p.mode }, src: live ? 'live' : 'guide', note: p.note, hours: p.hours, where: p.where, kindLabel: p.osmKind };
-  const avoid = p.hours && closedMonday(p.hours) ? [22] : [];
-  const extra = [];
-  if (avoid.length) extra.push(t('Its listed opening hours suggest it is closed on Mondays, so we avoided Mon 22.'));
+  const avoid = p.hours && closedMonday(p.hours) ? DAYS.filter(x => weekdayOf(x.d) === 1).map(x => x.d) : [];
+  const extra = [], cn = cityName(p.from);
+  if (avoid.length) extra.push(PRE ? t('Its listed opening hours suggest it is closed on Mondays, so we avoided Mon 22.') : t('Its listed opening hours suggest it is closed on Mondays, so we avoided Mondays.'));
   if (p.transport) extra.push(t('This looks like a station or airport rather than a sight.'));
-  if (p.from === 'han' || p.from === 'sgn') {
-    const stop = p.from === 'han' ? t('Your Hanoi stop is one evening and one morning, about 6 waking hours in total.') : t('Your Ho Chi Minh City stop is a short night: you land at 21:00 and leave the city by 06:50.');
-    const ok = each <= 40 && p.hrs <= 2 && p.from === 'han';
-    return { ...base, level: ok ? 'good' : 'no', day: ok ? 24 : null, need, reasons: [stop, t('This needs about {need} including {each} each way.', { need: fmtHrs(Math.round(need * 2) / 2), each: fmtMins(each) }), ...extra], instead: ok ? '' : t('Save it for a future trip, or see what fits in Explore.') };
+  if (PRE ? p.from === 'han' || p.from === 'sgn' : !isBase(p.from)) {
+    // A short transfer stop: only what fits in its free hours.
+    const slotDays = DAYS.filter(x => daySlots(x).some(s => s[0] === p.from)), free = slotDays.reduce((a, x) => a + daySlots(x).filter(s => s[0] === p.from).reduce((b, s) => b + s[2], 0), 0);
+    const stop = PRE ? (p.from === 'han' ? t('Your Hanoi stop is one evening and one morning, about 6 waking hours in total.') : t('Your Ho Chi Minh City stop is a short night: you land at 21:00 and leave the city by 06:50.'))
+      : t('Your {city} stop has about {h} of waking time.', { city: cn, h: fmtHrs(free) });
+    const ok = PRE ? each <= 40 && p.hrs <= 2 && p.from === 'han' : each <= 40 && need <= Math.max(...slotDays.map(x => daySlots(x).find(s => s[0] === p.from)[2]), 0);
+    const day = ok ? (PRE ? PD(24) : slotDays.sort((a, b) => daySlots(b).find(s => s[0] === p.from)[2] - daySlots(a).find(s => s[0] === p.from)[2])[0].d) : null;
+    return { ...base, level: ok ? 'good' : 'no', day, need, reasons: [stop, t('This needs about {need} including {each} each way.', { need: fmtHrs(Math.round(need * 2) / 2), each: fmtMins(each) }), ...extra], instead: ok ? '' : t('Save it for a future trip, or see what fits in Explore.') };
   }
   if (each <= 60 && p.hrs <= 4) {
-    const pick = bestShanghaiDay(need, pref, p.ll, avoid);
-    const r = [p.mode === 'walk' ? t('Right in central Shanghai, walkable from the main sights.') : t('Inside Shanghai, {each} each way by {mode}.', { each: fmtMins(each), mode: t(MODE[p.mode]) })];
+    const pick = bestShanghaiDay(need, pref, p.ll, avoid, p.from);
+    const r = [p.from === 'sh' ? (p.mode === 'walk' ? t('Right in central Shanghai, walkable from the main sights.') : t('Inside Shanghai, {each} each way by {mode}.', { each: fmtMins(each), mode: t(MODE[p.mode]) }))
+      : p.mode === 'walk' ? t('Right in central {city}, walkable from the main sights.', { city: cn }) : t('Inside {city}, {each} each way by {mode}.', { city: cn, each: fmtMins(each), mode: t(MODE[p.mode]) })];
     if (pick.near) r.push(t('{dist} from {place}, already on {day}, so do them together.', { dist: fmtKm(pick.near.dist), place: nameOf(pick.near.it), day: dayLabel(pick.near.d) }));
-    return { ...base, level: each <= 45 ? 'great' : 'good', day: pick.day, need, inCity: true, reasons: [...r, ...extra, ...dayNotes(pick.day, !p.indoor)] };
+    return { ...base, level: each <= 45 ? 'great' : 'good', day: pick.day, need, inCity: true, reasons: [...r, ...extra, ...dayNotes(pick.day, !p.indoor, p.from)] };
   }
-  if (p.from === 'sh' && each <= 75 && p.hrs >= 4) {
-    const pick = bestShanghaiDay(p.hrs + round, pref, p.ll, [22, 20, ...avoid]);
-    return { ...base, level:'good', day: pick.day, need, inCity: true, reasons: [t('A full day out inside Shanghai: {each} each way by {mode}.', { each: fmtMins(each), mode: t(MODE[p.mode]) }), pick.day === 20 || pick.day === 21 ? t('Your free weekdays already have day trips, so the weekend is the best fit.') : t('A weekday, so it will be calmer.'), ...extra, ...dayNotes(pick.day, !p.indoor)] };
+  if (isBase(p.from) && each <= 75 && p.hrs >= 4) {
+    const pick = bestShanghaiDay(p.hrs + round, pref, p.ll, [...(PRE ? [PD(22), PD(20)] : []), ...avoid], p.from), wk = weekdayOf(pick.day) === 0 || weekdayOf(pick.day) === 6;
+    return { ...base, level:'good', day: pick.day, need, inCity: true, reasons: [p.from === 'sh' ? t('A full day out inside Shanghai: {each} each way by {mode}.', { each: fmtMins(each), mode: t(MODE[p.mode]) }) : t('A full day out inside {city}: {each} each way by {mode}.', { city: cn, each: fmtMins(each), mode: t(MODE[p.mode]) }), wk ? t('Your free weekdays already have day trips, so the weekend is the best fit.') : t('A weekday, so it will be calmer.'), ...extra, ...dayNotes(pick.day, !p.indoor, p.from)] };
   }
   const day = bestTripDay(pref, avoid);
   const via = p.hub ? ' ' + t('(bullet train via {city})', { city: LANG === 'zh' ? p.hub[1] : p.hub[0] }) : '';
@@ -196,14 +210,14 @@ function assess(m, pref) {
   if (each <= 160 && need <= 13) return { ...base, level:'long', day, need, trip:true, reasons: [t('{each} each way by {mode}, so about {round} of travel in one day.', { each: fmtMins(each), mode: t(MODE[p.mode]), round: fmtHrs(Math.round(round * 2) / 2) }) + via, t('Leave by about 07:30 and expect to be back late.'), ...extra, ...dayNotes(day, true)] };
   if (each <= 300) {
     const open = NIGHTS.filter(n => n.kind === 'open').map(n => n.d);
-    return { ...base, level:'overnight', day, need, trip:true, reasons: [t('{each} each way by {mode}. That is too much travel for one day.', { each: fmtMins(each), mode: t(MODE[p.mode]) }), open.length ? t('You still have {n} unbooked nights ({days} Feb), so you could spend one of them there instead.', { n: open.length, days: open.join(', ') }) : '', ...extra].filter(Boolean) };
+    return { ...base, level:'overnight', day, need, trip:true, reasons: [t('{each} each way by {mode}. That is too much travel for one day.', { each: fmtMins(each), mode: t(MODE[p.mode]) }), open.length ? t('You still have {n} unbooked nights ({days}), so you could spend one of them there instead.', { n: open.length, days: open.map(dayShort).join(', ') }) : '', ...extra].filter(Boolean) };
   }
-  if (p.dist > 1500) return { ...base, level:'no', need, reasons: [t('About {km} from Shanghai, roughly {each} each way by air including airports.', { km: fmtKm(p.dist), each: fmtMins(each) }), t('This belongs to a different trip.')] };
-  return { ...base, level:'no', need, reasons: [t('About {each} each way by {mode}.', { each: fmtMins(each), mode: t(MODE[p.mode]) }), t('It would take at least 2 of your 6 Shanghai days just to get there and back.')], instead: t('Closer alternatives with a similar feel: Suzhou, Hangzhou or Nanjing.') };
+  if (p.dist > 1500) return { ...base, level:'no', need, reasons: [p.from === 'sh' ? t('About {km} from Shanghai, roughly {each} each way by air including airports.', { km: fmtKm(p.dist), each: fmtMins(each) }) : t('About {km} from {city}, roughly {each} each way by air including airports.', { km: fmtKm(p.dist), city: cn, each: fmtMins(each) }), t('This belongs to a different trip.')] };
+  return { ...base, level:'no', need, reasons: [t('About {each} each way by {mode}.', { each: fmtMins(each), mode: t(MODE[p.mode]) }), PRE ? t('It would take at least 2 of your 6 Shanghai days just to get there and back.') : t('It would take at least 2 days of your trip just to get there and back.')], instead: PRE ? t('Closer alternatives with a similar feel: Suzhou, Hangzhou or Nanjing.') : '' };
 }
 function assessStay(p) {
   const base = { name: p.n, local: p.zh || '', place: p, src:'live', stay:true, where: p.where, kindLabel: p.osmKind };
-  if (p.from !== 'sh') return { ...base, level: p.dist <= 5 ? 'good' : 'long', reasons: [t('{dist} from the centre of {city}.', { dist: fmtKm(p.dist), city: cityName(p.from) })] };
+  if (p.from !== 'sh') { const lv = p.dist <= 3 ? 'great' : p.dist <= 8 ? 'good' : p.dist <= 20 ? 'long' : 'no'; return { ...base, level: isBase(p.from) ? lv : p.dist <= 5 ? 'good' : 'long', reasons: [t('{dist} from the centre of {city}.', { dist: fmtKm(p.dist), city: cityName(p.from) }), ...(isBase(p.from) ? [lv === 'great' ? t('A central base: most sights are a short ride away.') : lv === 'good' ? t('Fine as a base, with some longer rides.') : t('Far from the sights. Expect long rides every day.')] : [])] }; }
   const ps = km(p.ll, LL.sh), bund = km(p.ll, SPOTS.bund), pvg = km(p.ll, SPOTS.pvg), hq = km(p.ll, SPOTS.hongqiao);
   const level = ps <= 6 ? 'great' : ps <= 15 ? 'good' : ps <= 30 ? 'long' : 'no';
   return { ...base, level, reasons: [
@@ -218,7 +232,8 @@ function assessStay(p) {
 let sampleFn = null;
 (window.claude?.use ? window.claude.use('sample') : Promise.resolve(null)).then(s => { sampleFn = s; if (s) $$('.v-claude').forEach(b => b.hidden = false); }).catch(() => {});
 function tripContext() {
-  const days = DAYS.map(x => `${dayLabel(x.d)}: ${x.cities.map(c => CITYN[c]).join(' → ')}, ${(+x.free.toFixed(1))} h free, ${Math.max(0, +freeLeft(x.d).toFixed(1))} h still unplanned${x.note ? ' (' + x.note + ')' : ''}`).join('\n');
+  const days = DAYS.map(x => `${isoDay(x.d)} (${dayLabel(x.d)}): ${x.cities.map(c => CITYN[c]).join(' → ')}, ${(+x.free.toFixed(1))} h free, ${Math.max(0, +freeLeft(x.d).toFixed(1))} h still unplanned${x.note ? ' (' + x.note + ')' : ''}`).join('\n');
+  if (!PRE) return `Trip: ${LEGS.map(l => `${CITY[l.from].city} → ${CITY[l.to].city} ${isoDay(eday(l.dep, CITY[l.from].tz))} ${hmz(l.dep, CITY[l.from].tz)}–${hmz(l.arr, CITY[l.to].tz)}`).join('; ')}. Stays: ${myStays.map(x => `${x.name} ${isoDay(x.from)} to ${isoDay(x.to)}`).join('; ') || 'none booked'}. Pace about ${PACE[plan.prefs.pace]} h of sightseeing a day. City keys: ${Object.keys(LL).map(k => `${k} = ${CITYN[k]}`).join(', ')}.\nDays:\n${days}`;
   return `Trip (2027): fly Kuala Lumpur → Ho Chi Minh City 17 Feb (land 21:00, overnight, fly on at 09:20), Shanghai 18 Feb 14:15 → 24 Feb 15:25 (Lantern Festival 20 Feb; ${myStays.map(x => `staying at ${x.name} ${x.from}–${x.to} Feb`).join('; ') || 'no hotels booked'}; nights not booked yet: ${NIGHTS.filter(n => n.kind === 'open').map(n => n.d + ' Feb').join(', ') || 'none'}), Hanoi 24 Feb 18:05 → 25 Feb 14:50 (must be back at the airport 12:20), home to Kuala Lumpur. Traveller holds a Malaysian passport, uses public transport and DiDi/Grab, pace about ${PACE[plan.prefs.pace]} h of sightseeing a day.\nDays:\n${days}`;
 }
 async function askClaude(q, pref, host, hostId) {
@@ -227,14 +242,14 @@ async function askClaude(q, pref, host, hostId) {
   host.innerHTML = `<div class="tr-res loading"><span class="shimmer"></span><span class="shimmer short"></span><span class="status">${t('Asking Claude…')}</span><button class="sbtn" type="button" id="stop-${hostId}">${t('Stop')}</button></div>`;
   $('#stop-' + hostId).onclick = () => ctl.abort();
   const lang = LANG === 'zh' ? 'Simplified Chinese' : 'English';
-  const prompt = `You are a careful travel planner. Decide whether a place the traveller typed suits THIS trip, and when to go.\n\n${tripContext()}\n\nPlace typed: "${q.slice(0, 200)}"${pref ? `\nThe traveller is looking at ${dayLabel(pref)}.` : ''}\n\nRules: identify the most likely real place (the traveller is probably asking about somewhere near Shanghai, Suzhou, Hangzhou, Hanoi or Ho Chi Minh City). Estimate realistic door-to-door travel time from the relevant trip city by the best public option. level: "great" or "good" (fits easily), "long" (possible as a long day trip), "overnight" (needs a night there), "no" (too far or doesn't fit), "skip" (a known tourist trap or scam). best_day: the day-of-month number (17–25) that fits best, or null. Keep reasons short, concrete and honest; if you are unsure of opening days or prices, say so. Write names and reasons in ${lang}.\n\nReply with only this JSON: {"found":true,"name":"English name","local_name":"Chinese or Vietnamese name","where":"city, country","kind":"museum|temple|park|town|city|restaurant|hotel|…","from":"sh|han|sgn","minutes_each_way":60,"mode":"metro|car|bus|train|ferry|flight|walk","hours_needed":2,"level":"good","best_day":21,"reasons":["…","…"],"tip":"…","instead":""}\nIf you cannot identify the place, reply {"found":false,"suggestions":["up to 3 likely places"]}.`;
+  const prompt = `You are a careful travel planner. Decide whether a place the traveller typed suits THIS trip, and when to go.\n\n${tripContext()}\n\nPlace typed: "${q.slice(0, 200)}"${pref ? `\nThe traveller is looking at ${dayLabel(pref)}.` : ''}\n\nRules: identify the most likely real place (the traveller is probably asking about somewhere near ${Object.keys(LL).map(k => CITYN[k]).join(', ')}). Estimate realistic door-to-door travel time from the relevant trip city by the best public option. level: "great" or "good" (fits easily), "long" (possible as a long day trip), "overnight" (needs a night there), "no" (too far or doesn't fit), "skip" (a known tourist trap or scam). best_date: the trip date (YYYY-MM-DD) that fits best, or null. Keep reasons short, concrete and honest; if you are unsure of opening days or prices, say so. Write names and reasons in ${lang}.\n\nReply with only this JSON: {"found":true,"name":"English name","local_name":"Chinese or Vietnamese name","where":"city, country","kind":"museum|temple|park|town|city|restaurant|hotel|…","from":"${Object.keys(LL).join('|')}","minutes_each_way":60,"mode":"metro|car|bus|train|ferry|flight|walk","hours_needed":2,"level":"good","best_date":"${isoDay(DAYS[Math.floor(DAYS.length / 2)].d)}","reasons":["…","…"],"tip":"…","instead":""}\nIf you cannot identify the place, reply {"found":false,"suggestions":["up to 3 likely places"]}.`;
   const j = await sampleFn.json(prompt, { signal: ctl.signal });
   if (!j || j.found === false) return { level:'unknown', name: q, reasons: [t('Claude couldn’t identify this place.')], suggestions: (j?.suggestions || []).slice(0, 3).map(String), src:'claude' };
   const lv = ['great','good','long','overnight','no','skip'].includes(j.level) ? j.level : 'good';
-  const from = ['sh','han','sgn'].includes(j.from) ? j.from : 'sh', mins = Math.max(5, +j.minutes_each_way || 30), hrs = Math.max(.5, Math.min(24, +j.hours_needed || 2));
-  const mode = MODE[j.mode] ? j.mode : 'car', day = DAYS.some(x => x.d === +j.best_day) ? +j.best_day : null;
+  const from = LL[j.from] ? j.from : MAIN_KEY, mins = Math.max(5, +j.minutes_each_way || 30), hrs = Math.max(.5, Math.min(24, +j.hours_needed || 2));
+  const mode = MODE[j.mode] ? j.mode : 'car', day = DAYS.find(x => isoDay(x.d) === String(j.best_date))?.d || null;
   const place = { n: String(j.name || q), zh: String(j.local_name || ''), from, mins, mode, hrs };
-  return { level: lv, name: place.n, local: place.zh, city: from, place, facts: { each: mins, hrs, mode }, day, need: mins / 30 + hrs, trip: from === 'sh' && mins > 60 && !['no','skip'].includes(lv), inCity: from === 'sh' && mins <= 60,
+  return { level: lv, name: place.n, local: place.zh, city: from, place, facts: { each: mins, hrs, mode }, day, need: mins / 30 + hrs, trip: from === MAIN_KEY && mins > 60 && !['no','skip'].includes(lv), inCity: isBase(from) && mins <= 60,
     reasons: (Array.isArray(j.reasons) ? j.reasons : []).slice(0, 5).map(String), note: j.tip ? String(j.tip) : '', instead: j.instead ? String(j.instead) : '', where: j.where ? String(j.where) : '', kindLabel: j.kind ? String(j.kind) : '', src:'claude' };
 }
 
@@ -259,7 +274,7 @@ function verdictHtml(v, hostId, alts = []) {
     <div class="v-acts">
       ${canAdd ? `<label class="sr" for="vd-${hostId}">${t('Day')}</label><select class="sel" id="vd-${hostId}">${dayOpts}</select><button class="btn" type="button" data-vadd="${hostId}">${t('Add to plan')}</button>` : ''}
       ${!canAdd && !v.stay && v.level !== 'skip' ? `<label class="sr" for="vd-${hostId}">${t('Day')}</label><select class="sel" id="vd-${hostId}">${DAYS.map(x => `<option value="${x.d}">${dayShort(x.d)}</option>`).join('')}</select><button class="sbtn" type="button" data-vadd="${hostId}" data-anyway="1">${t('Add anyway')}</button>` : ''}
-      ${v.stay && v.place?.from === 'sh' ? `<button class="btn" type="button" data-hotel="${hostId}">${t('Use for my driver card')}</button>` : ''}
+      ${v.stay && v.place?.from && LL[v.place.from] ? `<button class="btn" type="button" data-hotel="${hostId}">${t('Use for my driver card')}</button>` : ''}
       ${v.src !== 'claude' ? `<button class="sbtn v-claude" type="button" data-claude="${hostId}"${sampleFn ? '' : ' hidden'}>${t('Ask Claude')}</button>` : ''}
     </div>
   </div>`;
@@ -296,11 +311,11 @@ function addVerdict(hostId, anyway) {
     if (!plan.items[d].includes(it.id)) insertSorted(d, it.id);
   } else {
     const p = v.place || {}, id = 'u-' + Date.now().toString(36);
-    let c = v.inCity ? 'sh' : p.from || 'sh';
+    let c = p.from || MAIN_KEY;
     if (v.trip && !x.slots) {
       c = 'x-' + (p.id || fold(p.n).replace(/\s+/g, '-').slice(0, 30));
       plan.extra = plan.extra || {};
-      plan.extra[c] = { n: p.n, l: p.zh || p.n, lang:'zh', kind:'daytrip', train: t('{mode} from Shanghai, about {each} each way.', { mode: t(MODE[p.mode]).replace(/^./, s => s.toUpperCase()), each: fmtMins(p.mins) }), leave: t('Leave early.'), hrs: Math.round(p.mins * 4 / 60) / 2 };
+      plan.extra[c] = { n: p.n, l: p.zh || p.n, lang: CITIES[MAIN_KEY]?.lang || 'zh', kind:'daytrip', train: t('{mode} from {city}, about {each} each way.', { city: cityName(MAIN_KEY), mode: t(MODE[p.mode]).replace(/^./, s => s.toUpperCase()), each: fmtMins(p.mins) }), leave: t('Leave early.'), hrs: Math.round(p.mins * 4 / 60) / 2 };
       CITIES[c] = plan.extra[c]; CITYN[c] = p.n;
       plan.base[d] = c; plan.items[d] = plan.items[d].filter(i => getItem(i).custom);
     }
@@ -315,14 +330,14 @@ function addVerdict(hostId, anyway) {
   $('#' + hostId).innerHTML = '';
 }
 async function useAsHotel(hostId) {
-  const p = lastVerdict[hostId].v.place;
+  const p = lastVerdict[hostId].v.place, city = p.from || MAIN_KEY, cn = ccOfKey(city) === 'CN';
   let name = p.zh || p.n, text = '';
   try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=zh-CN&lat=${p.ll[0]}&lon=${p.ll[1]}`);
-    const j = await r.json(); text = (j.display_name || '').split(', ').reverse().filter(s => !/^\d{6}$/.test(s) && s !== '中国').join('');
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=${cn ? 'zh-CN' : langOf(ccOfKey(city))}&lat=${p.ll[0]}&lon=${p.ll[1]}`);
+    const j = await r.json(); text = cn ? (j.display_name || '').split(', ').reverse().filter(s => !/^\d{6}$/.test(s) && s !== '中国').join('') : (j.display_name || '');
   } catch {}
-  const free = NIGHTS.find(n => n.kind === 'open');
-  openStay(null, { name, addr: text, city: 'sh', from: free ? free.d : 18 });
+  const free = NIGHTS.find(n => n.kind === 'open' && citiesForNight(n.d).includes(city)) || NIGHTS.find(n => n.kind === 'open');
+  openStay(null, { name, addr: text, city: citiesForNight(free?.d).includes(city) ? city : free?.city, from: free?.d });
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-vadd]'); if (b) { addVerdict(b.dataset.vadd, !!b.dataset.anyway); return; }

@@ -2,7 +2,7 @@
    Places you add yourself get the same kind of card as the guide's: details are looked up once, online, from
    OpenStreetMap (address in the local language, category, opening hours, website, phone) and Wikipedia (photo and
    a short description in English and Chinese), then saved with your plan so they stay available offline. */
-const MINE_CITY = c => CITIES[c] ? c : 'sh';
+const MINE_CITY = c => CITIES[c] ? c : MAIN_KEY;
 const cityLocal = c => ({ sh:'上海', sz:'苏州', hz:'杭州', han:'Hà Nội', sgn:'Thành phố Hồ Chí Minh' })[c] || CITIES[c]?.l || '';
 async function jget(url, ms = 9000, headers = {}) {
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), ms);
@@ -13,7 +13,7 @@ const osmRef = o => o ? ({ node:'N', way:'W', relation:'R' }[o.type] || o.type) 
 // An address a driver can read: Chinese order for China, Vietnamese order for Vietnam.
 function localAddr(a, c, name = '') {
   if (!a) return '';
-  if (CITIES[c]?.lang === 'vi') return [[a.house_number, a.road].filter(Boolean).join(' ') || name, a.quarter || a.suburb, a.city_district, a.city || a.state].filter(Boolean).join(', ');
+  if (CITIES[c]?.lang !== 'zh') return [[a.house_number, a.road].filter(Boolean).join(' ') || name, a.quarter || a.suburb, a.city_district, a.city || a.state].filter(Boolean).join(', ');
   const no = a.house_number ? a.house_number + (/^\d+[A-Za-z]?$/.test(a.house_number) ? '号' : '') : '';
   // Shanghai is a province-level city (state 上海市); elsewhere the city is 苏州市 or 杭州市. Sub-districts (街道) are left out.
   const top = /市$/.test(a.state || '') ? a.state : [a.city, a.state].find(x => /市$/.test(x || '')) || '';
@@ -36,7 +36,7 @@ async function enrichMine(id, force) {
   if (navigator.onLine === false) return;
   enriching.add(id); renderMineIfShown();
   const c = MINE_CITY(it.c), info = { ...(it.info || {}) }, [la, lo] = (MAP_CENTRE[c] || MAP_CENTRE.sh);
-  const lang = CITIES[c]?.lang === 'vi' ? 'vi' : 'zh-CN';
+  const lang = ccOfKey(c) === 'CN' ? 'zh-CN' : LANGS[langOf(ccOfKey(c))]?.[3] || 'en';
   let failed = false;
   try {
     // 1. OpenStreetMap: the exact object if we know it, otherwise search by name near the city
@@ -102,9 +102,9 @@ function mineCard(it, ix) {
     : cover({ id: it.id, n: it.n, l: it.l || it.n }, 'stay').replace('</div>', `<span class="tier mine">${t('Yours')}</span></div>`);
   const v = it.verdict, vChip = v && LEVEL[v.level] ? `<span class="chip ${LEVEL[v.level][1]}">${t(LEVEL[v.level][0])}</span>` : '';
   const rows = [
-    info.addr && [t('Address'), `<span lang="${zh ? 'zh-CN' : 'vi'}">${esc(info.addr)}</span>`],
+    info.addr && [t('Address'), `<span lang="${phr(langOf(ccOfKey(c))).speech}">${esc(info.addr)}</span>`],
     info.hours && [t('Opening hours'), esc(fmtHours(info.hours))],
-    trip && [t('Getting there'), esc(trip.mode === 'walk' ? t('About {m} on foot from central {from}', { m: fmtMins(trip.mins), from: cityName(trip.from || 'sh') }) : t('About {m} by {mode} from central {from}', { m: fmtMins(trip.mins), mode: t(MODE[trip.mode] || trip.mode), from: cityName(trip.from || 'sh') }))],
+    trip && [t('Getting there'), esc(trip.mode === 'walk' ? t('About {m} on foot from central {from}', { m: fmtMins(trip.mins), from: cityName(trip.from || MAIN_KEY) }) : t('About {m} by {mode} from central {from}', { m: fmtMins(trip.mins), mode: t(MODE[trip.mode] || trip.mode), from: cityName(trip.from || MAIN_KEY) }))],
     info.cuisine && [t('Cuisine'), esc(info.cuisine.replace(/;/g, ', ').replace(/_/g, ' '))],
     info.phone && [t('Phone'), telLink(info.phone)],
     info.web && [t('Website'), webLink(info.web)]
@@ -140,7 +140,7 @@ $('#xGrid').addEventListener('click', async e => {
     savePlan(); renderDays(); renderExplore(); toast(t('{name} added to {day}', { name: plan.custom[id].n, day: dayLabel(d) })); return;
   }
   const sh = e.target.closest('[data-mshow]');
-  if (sh) { const it = plan.custom[sh.dataset.mshow], zh = CITIES[MINE_CITY(it.c)]?.lang === 'zh'; openShow((zh ? '请带我去：' : 'Làm ơn đưa tôi đến: ') + (it.l || it.n), it.info?.addr || '', t('Please take me to: {n}', { n: it.n }), zh ? 'zh' : 'vi'); return; }
+  if (sh) { const it = plan.custom[sh.dataset.mshow], lg = langOf(ccOfKey(MINE_CITY(it.c))); openShow((lg === 'zh' ? '请带我去：' : lg === 'vi' ? 'Làm ơn đưa tôi đến: ' : phr(lg).lead) + (it.l || it.n), it.info?.addr || '', t('Please take me to: {n}', { n: it.n }), lg); return; }
   const cp = e.target.closest('[data-copy-mine]');
   if (cp) { const it = plan.custom[cp.dataset.copyMine], n = it.l || it.n; try { await navigator.clipboard.writeText(n); toast(t('Copied {n}. Paste it into Dianping or Trip.com for live reviews.', { n })); } catch { toast(t('Search {n} on Dianping (大众点评) or Trip.com for live reviews', { n })); } return; }
   const en = e.target.closest('[data-menrich]'); if (en) { enrichMine(en.dataset.menrich, true); return; }

@@ -2,13 +2,16 @@
    1. Phrasebook first: verified phrases, works offline.
    2. Otherwise machine translation from MyMemory (free, no key) when online; results are cached for offline reuse.
    3. Voice input through the browser's speech recognition where available. */
-const TR_LANGS = { 'en':['English','en-GB'], 'zh-CN':['中文','zh-CN'], 'vi':['Tiếng Việt','vi-VN'] };
-let trDir = 'en|zh-CN', trTimer = 0, trSeq = 0, trLast = null;
+// English plus each language of this trip, keyed by MyMemory's language code.
+const TR_LANGS = Object.fromEntries([['en', ['English', 'en-GB', 'en']], ...SAY_LANGS.filter(k => k !== 'en').map(k => [LANGS[k][3], [LANGS[k][1], LANGS[k][2], k]])]);
+const TR_TARGETS = Object.keys(TR_LANGS).filter(c => c !== 'en');
+let trDir = TR_TARGETS.length ? 'en|' + TR_TARGETS[0] : 'en|en', trTimer = 0, trSeq = 0, trLast = null;
+$('#trDir').innerHTML = [...TR_TARGETS.map(c => `en|${c}`), ...TR_TARGETS.map(c => `${c}|en`)].map((d, i) => { const [a, b] = d.split('|'); return `<button type="button" data-v="${d}" aria-pressed="${i === 0}">${esc(TR_LANGS[a][0])} → ${esc(TR_LANGS[b][0])}</button>`; }).join('');
 const trCache = store.get('trcache', {});
 const norm = s => s.toLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
 const STOP = new Set(['the','a','an','please','i','to','is','me','my','this','it','of','do','you','can']);
 const toks = s => norm(s).split(' ').filter(w => w && !STOP.has(w));
-function phrasebook(tgt) { const key = tgt === 'zh-CN' ? 'zh' : 'vi'; return PHRASES[key].groups.flatMap(g => g[1]).map(([en, lo, ro]) => ({ en, lo, ro, lang: key })); }
+function phrasebook(tgt) { const key = TR_LANGS[tgt]?.[2]; return key && key !== 'en' ? phr(key).groups.flatMap(g => g[1]).map(([en, lo, ro]) => ({ en, lo, ro, lang: key })) : []; }
 function matchPhrase(text, src, tgt) {
   const pool = src === 'en' ? phrasebook(tgt) : phrasebook(src);
   const q = src === 'en' ? toks(text) : null, qs = norm(text);
@@ -23,7 +26,7 @@ const decode = s => { const t = document.createElement('textarea'); t.innerHTML 
 function trRender(state) {
   const out = $('#trOut'), [src, tgt] = trDir.split('|');
   if (state.kind === 'empty') {
-    const ex = src === 'en' ? ['Where is the metro station?', 'How much is this?', 'Not spicy, please.', 'I lost my passport.'] : src === 'zh-CN' ? ['这个多少钱？', '请打表。', '洗手间在哪里？'] : ['Bao nhiêu tiền?', 'Nhà vệ sinh ở đâu?'];
+    const ex = src === 'en' ? ['Where is the metro station?', 'How much is this?', 'Not spicy, please.', 'I lost my passport.'] : src === 'zh-CN' ? ['这个多少钱？', '请打表。', '洗手间在哪里？'] : src !== 'vi' ? phrasebook(src).slice(0, 3).map(p => p.lo) : ['Bao nhiêu tiền?', 'Nhà vệ sinh ở đâu?'];
     out.innerHTML = `<div class="tr-ex"><span class="eyebrow">Try</span>${ex.map(x => `<button class="pill" type="button" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
     return;
   }
@@ -34,7 +37,7 @@ function trRender(state) {
     return;
   }
   trLast = state;
-  const tl = tgt === 'zh-CN' ? 'zh-CN' : tgt === 'vi' ? 'vi' : 'en';
+  const tl = TR_LANGS[tgt]?.[1] || 'en';
   out.innerHTML = `<div class="tr-res">
     <div class="tr-badges">${state.verified ? '<span class="chip good">✓ Phrasebook · works offline</span>' : state.cached ? '<span class="chip">Saved translation</span>' : state.byClaude ? '<span class="chip good">Translated by Claude</span>' : '<span class="chip warn">Machine translation · check key details</span>'}</div>
     <div class="tr-text" lang="${tl}">${esc(state.text)}</div>
@@ -77,7 +80,7 @@ async function translateNow() {
       // On claude.ai the page cannot reach outside services, so Claude translates instead.
       try {
         trRender({ kind:'loading' });
-        const names = { 'en':'English', 'zh-CN':'Simplified Chinese', 'vi':'Vietnamese' };
+        const names = Object.fromEntries(Object.entries(TR_LANGS).map(([c, v]) => [c, c === 'zh-CN' ? 'Simplified Chinese' : c === 'en' ? 'English' : LANGS[v[2]]?.[0] || c]));
         const r = await sampleFn(`Translate this ${names[src]} text into natural, polite ${names[tgt]} that a traveller can show to a local person. Reply with only the translation, nothing else.
 
 ${text.slice(0, 480)}`, { modelTier:'quick' });
@@ -101,13 +104,13 @@ function speakText(text, code, done) {
 }
 $('#trText').addEventListener('input', () => { clearTimeout(trTimer); trTimer = setTimeout(translateNow, 650); });
 $('#trText').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); clearTimeout(trTimer); translateNow(); } });
-bindSeg('#trDir', v => { trDir = v; const [src] = v.split('|'); $('#trText').placeholder = src === 'en' ? t('Type what you want to say…') : src === 'zh-CN' ? '输入或说出中文…' : 'Nhập hoặc nói tiếng Việt…'; $('#trText').lang = TR_LANGS[src][1]; translateNow(); });
+bindSeg('#trDir', v => { trDir = v; const [src] = v.split('|'); $('#trText').placeholder = src === 'en' ? t('Type what you want to say…') : src === 'zh-CN' ? '输入或说出中文…' : src === 'vi' ? 'Nhập hoặc nói tiếng Việt…' : '…'; $('#trText').lang = TR_LANGS[src][1]; translateNow(); });
 $('#trOut').addEventListener('click', async e => {
   const ex = e.target.closest('[data-ex]'), sg = e.target.closest('[data-sugg]');
   if (ex) { $('#trText').value = ex.dataset.ex; translateNow(); return; }
   if (sg) { const p = trLast.sugg[+sg.dataset.sugg]; const [src] = trDir.split('|'); $('#trText').value = src === 'en' ? p.en : p.lo; translateNow(); return; }
   const [src, tgt] = trDir.split('|');
-  if (e.target.id === 'trShow') openShow(trLast.text, trLast.ro || '', $('#trText').value.trim(), tgt === 'zh-CN' ? 'zh' : 'vi');
+  if (e.target.id === 'trShow') openShow(trLast.text, trLast.ro || '', $('#trText').value.trim(), TR_LANGS[tgt]?.[2] || 'en');
   if (e.target.id === 'trSpeak') speakText(trLast.text, TR_LANGS[tgt][1]);
   if (e.target.id === 'trCopy') { try { await navigator.clipboard.writeText(trLast.text); toast('Copied'); } catch { toast('Copy isn’t allowed here. Press and hold the text to copy it.'); } }
 });
