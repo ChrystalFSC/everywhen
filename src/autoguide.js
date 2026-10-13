@@ -3,7 +3,7 @@
    become Explore cards and fill the day plan: sights ranked by how widely known they are (Wikipedia articles across
    languages, from Wikidata), with photos from Wikimedia Commons. It is built once per city while online and kept
    on this device, so Explore and the plan keep working offline. */
-const AG_VER = 2; // raising this rebuilds every saved guide with the current rules
+const AG_VER = 3; // raising this rebuilds every saved guide with the current rules
 const AG_LL = {}, AG_PHOTOS = {}, AG_DETAILS = {}, AG_META = {};
 const agKey = code => 'guide:' + code;
 const AG_KEYS = STOP_KEYS.filter(k => !CTX[k]);
@@ -152,7 +152,7 @@ const WV = 'https://en.wikivoyage.org/w/api.php?format=json&formatversion=2&orig
 async function agGet(url, ms = 20000) {
   for (let i = 0; ; i++) {
     try { return await jget(url, ms); }
-    catch (e) { if (i >= 2 || !/429|503/.test(e.message)) throw e; await new Promise(r => setTimeout(r, 3000 * (i + 1))); }
+    catch (e) { if (i >= 4 || !/429|503/.test(e.message)) throw e; await new Promise(r => setTimeout(r, [2, 5, 10, 20][i] * 1000)); }
   }
 }
 const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
@@ -188,8 +188,10 @@ async function agWikidata(qids, lang) {
   }
   return out;
 }
-// English Wikipedia articles named like listings that have no Wikidata link, accepted only within 3 km of the listing.
-async function agByName(list) {
+// English Wikipedia articles named like listings that have no Wikidata link: accepted within 3 km of the listing, or,
+// for a listing with no position, within 40 km of the city (which then gives it a map pin).
+const agNear = (x, c, centre) => c && (x.lat ? km([c.lat, c.lon], [x.lat, x.lon]) <= 3 : km([c.lat, c.lon], centre) <= 40);
+async function agByName(list, centre) {
   const out = new Map();
   for (const part of chunk(list, 50)) {
     const name = x => x.name.replace(/\s*\(.*?\)\s*/g, ' ').trim();
@@ -199,22 +201,52 @@ async function agByName(list) {
     part.forEach(x => {
       let t = name(x); for (let i = 0; i < 3 && fwd[t]; i++) t = fwd[t];
       const p = pages[t], c = p?.coordinates?.[0];
-      if (p?.pageprops?.wikibase_item && c && km([c.lat, c.lon], [x.lat, x.lon]) <= 3) out.set(x, { qid: p.pageprops.wikibase_item, wp: p.title });
+      if (p?.pageprops?.wikibase_item && agNear(x, c, centre)) out.set(x, { qid: p.pageprops.wikibase_item, wp: p.title, ll: [c.lat, c.lon] });
     });
   }
   return out;
 }
+// Wikipedia search, for names that differ from the article's ("Semenggoh national park" → Semenggoh Nature Reserve):
+// the top results are accepted only if they are in the right place and share a distinctive word with the name.
+async function agWikiSearch(list, centre, city) {
+  const out = new Map(), cityWords = new Set(city.toLowerCase().split(/\s+/));
+  const words = s => new Set(s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 3 && !AG_PLAIN.has(w) && !cityWords.has(w)));
+  const cands = new Map();
+  for (const part of chunk(list, 3)) await Promise.all(part.map(async x => {
+    const j = await agGet(`https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&list=search&srlimit=3&srsearch=${encodeURIComponent(x.name)}`).catch(() => null);
+    cands.set(x, (j?.query?.search || []).map(r => r.title));
+  }));
+  const titles = [...new Set([...cands.values()].flat())];
+  const pages = {};
+  for (const part of chunk(titles, 50)) {
+    const j = await agGet(`https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&prop=pageprops|coordinates&ppprop=wikibase_item&titles=${encodeURIComponent(part.join('|'))}`).catch(() => null);
+    (j?.query?.pages || []).forEach(p => pages[p.title] = p);
+  }
+  cands.forEach((ts, x) => {
+    const mine = words(x.name);
+    // One shared word within 3 km of the listing; two or more (a park, a group of islands) within 15 km.
+    const t = ts.find(t => { const p = pages[t], c = p?.coordinates?.[0], shared = [...words(t)].filter(w => mine.has(w)).length;
+      return p?.pageprops?.wikibase_item && shared && (agNear(x, c, centre) || (shared >= 2 && c && x.lat && km([c.lat, c.lon], [x.lat, x.lon]) <= 15)); });
+    if (t) out.set(x, { qid: pages[t].pageprops.wikibase_item, wp: t, ll: [pages[t].coordinates[0].lat, pages[t].coordinates[0].lon] });
+  });
+  return out;
+}
 // Wikimedia Commons, for places with no Wikipedia article: a photo whose file name contains every distinctive word of
 // the place's name ("Jalan Alor at night.jpg" for Jalan Alor), so a nearby but unrelated photo is never used.
-const AG_PLAIN = new Set('the and restaurant restoran cafe café coffee kopitiam bar pub shop store mall centre center market food court house kitchen hotel'.split(' '));
+const AG_PLAIN = new Set('the and national park museum temple restaurant restoran cafe café coffee kopitiam bar pub shop store mall centre center market food court house kitchen hotel'.split(' '));
 async function agCommonsSearch(list, city) {
   const out = new Map(), cityWords = new Set(city.toLowerCase().split(/\s+/));
   const words = s => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 2 && !AG_PLAIN.has(w) && !cityWords.has(w));
-  for (const part of chunk(list, 6)) await Promise.all(part.map(async x => {
+  for (const part of chunk(list, 3)) await Promise.all(part.map(async x => {
     const need = words(x.name); if (!need.length) return;
-    const j = await agGet(`https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&list=search&srnamespace=6&srlimit=8&srsearch=${encodeURIComponent(`${x.name} ${city}`)}`).catch(() => null);
-    const hit = (j?.query?.search || []).map(r => r.title.replace(/^File:/, '')).find(f => /\.(jpe?g|png|webp)$/i.test(f) && !/logo/i.test(f) && need.every(w => f.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').includes(w)));
-    if (hit) out.set(x, hit);
+    // The name alone first: adding the city often pushes the right photos out of the results.
+    // Whole words only, so "Mirage Spa" never matches a photo of a Mirage jet at "Spangdahlem".
+    const fileWords = f => new Set(f.replace(/\.\w+$/, '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u));
+    for (const q of [...new Set([x.name, need.join(' '), `${x.name} ${city}`])]) {
+      const j = await agGet(`https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&list=search&srnamespace=6&srlimit=8&srsearch=${encodeURIComponent(q)}`).catch(() => null);
+      const hit = (j?.query?.search || []).map(r => r.title.replace(/^File:/, '')).find(f => /\.(jpe?g|png|webp)$/i.test(f) && !/logo/i.test(f) && (fw => { const n = need.filter(w => fw.has(w)).length; return n === need.length || (need.length >= 3 && n >= need.length - 1); })(fileWords(f)));
+      if (hit) { out.set(x, hit); break; }
+    }
   }));
   return out;
 }
@@ -230,6 +262,14 @@ const AG_DISHES = [
   [/cocktail/i, 'Cocktail'], [/beer|brew/i, 'Beer'], [/wine/i, 'Wine'], [/vegetarian|vegan/i, 'Vegetarian cuisine'], [/coffee|café|cafe/i, 'Coffee'], [/\btea\b|teahouse/i, 'Tea']
 ];
 // The name says most ("Super Noodle House"), so it is matched before the description.
+// The same for activities with no photo of their own (a kayaking trip, a cooking class).
+const AG_ACTS = [
+  [/kayak|canoe/i, 'Kayaking'], [/scuba|diving|snorkel/i, 'Scuba diving'], [/cav(e|es|ing)\b/i, 'Caving'], [/batik/i, 'Batik'], [/tattoo/i, 'Tattoo'],
+  [/cooking|cookery/i, 'Cooking school'], [/\bspa\b|massage|reflexology/i, 'Massage'], [/bike|bicycle|cycling/i, 'Bicycle touring'], [/longhouse/i, 'Longhouse'],
+  [/crocodile/i, 'Saltwater crocodile'], [/rafting/i, 'Rafting'], [/zip ?line|flying fox/i, 'Zip-line'], [/surf/i, 'Surfing'], [/golf/i, 'Golf'],
+  [/climb/i, 'Rock climbing'], [/fishing/i, 'Recreational fishing'], [/yoga/i, 'Yoga'], [/cruise|boat/i, 'River cruise'], [/trek|hik(e|ing)|jungle|rainforest|trail/i, 'Hiking']
+];
+const agAct = x => (AG_ACTS.find(([re]) => re.test(x.name)) || AG_ACTS.find(([re]) => re.test(x.text)))?.[1] || '';
 const agDish = x => (AG_DISHES.find(([re]) => re.test(x.name)) || AG_DISHES.find(([re]) => re.test(x.text)))?.[1] || '';
 // English Wikipedia: each article's lead photo (free licences only) and coordinates.
 async function agWikipedia(titles) {
@@ -279,6 +319,8 @@ async function buildAutoGuide(k) {
   let all = Object.entries(pages).flatMap(([p, w]) => agListings(w, p));
   // Only places within reach of the city: a region's page links to towns far away.
   const centre = ptOf(code), reach = ll => km(ll, centre) <= 60;
+  // Steps that add rankings and photos may fail (Wikimedia rate limits): the guide is kept, and rebuilt on a later visit.
+  let partial = false; const miss = v => () => { partial = true; return v; };
   all = all.filter(x => x.lat ? reach([x.lat, x.lon]) : x.page === title || areas.length > 0);
   // Places that have closed are dropped, and the same place listed twice (on the city page and a district page) is kept once.
   all = all.filter(x => !/permanently closed|closed permanently|has (now )?closed|no longer (open|operat)|in renewal|closed for renovation/i.test(x.text + ' ' + x.hours));
@@ -291,18 +333,20 @@ async function buildAutoGuide(k) {
     keys.forEach(v => kept.set(v, x)); return true; });
 
   // Yearly events (a music festival in July) aren't places to visit on any date, so they're left out.
-  let sights = all.filter(x => (x.kind === 'see' || x.kind === 'do') && !/festival|carnival|regatta|marathon|parade\b|fair\b/i.test(x.name)).slice(0, 220);
-  (await agByName(sights.filter(x => !x.qid && !x.wp && x.lat).slice(0, 150)).catch(() => new Map())).forEach((v, x) => { x.qid = v.qid; x.wp = v.wp; });
+  let sights = all.filter(x => (x.kind === 'see' || x.kind === 'do') && !/festival|carnival|regatta|marathon|parade\b|fair\b|embassy|consulate|high commission/i.test(x.name)).slice(0, 220);
+  const link = (v, x) => { x.qid = v.qid; x.wp = v.wp; if (!x.lat && v.ll) { x.lat = v.ll[0]; x.lon = v.ll[1]; } };
+  (await agByName(sights.filter(x => !x.qid && !x.wp).slice(0, 150), centre).catch(miss(new Map()))).forEach(link);
+  (await agWikiSearch(sights.filter(x => !x.qid && !x.wp).slice(0, 60), centre, c.city).catch(miss(new Map()))).forEach(link);
   // Two listings that turn out to be the same Wikipedia article ("Kek Lok Si" and "Kek Lok Si Temple"): keep the fuller one.
   const byQ = new Map(); sights.forEach(x => { if (!x.qid) return; const o = byQ.get(x.qid); if (!o || x.text.length > o.text.length) byQ.set(x.qid, x); });
   sights = sights.filter(x => !x.qid || byQ.get(x.qid) === x);
-  const wd = await agWikidata([...new Set(all.map(x => x.qid).filter(Boolean))].slice(0, 300), lang).catch(() => ({}));
+  const wd = await agWikidata([...new Set(all.map(x => x.qid).filter(Boolean))].slice(0, 300), lang).catch(miss({}));
   // Wikidata links are sometimes to the wrong thing (a broadcaster for its studio): only trust them when a name matches.
   const words = s => new Set(s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 2 && !/^(the|and|of|de|la)$/.test(w)));
   const match = x => { const e = wd[x.qid]; if (!e) return false; const a = words(`${x.name} ${x.alt}`), b = words(`${e.en} ${e.local}`); return [...a].some(w => b.has(w) || [...b].some(v => v.length > 4 && (v.includes(w) || w.includes(v)))); };
   const links = x => match(x) ? (wd[x.qid]?.n || 0) : Math.min(4, wd[x.qid]?.n || 0);
   // Universities, stadiums and company offices have many Wikipedia articles but are rarely why people visit.
-  const notSight = x => /universit|college|school|hospital|broadcast|headquarters|stadium|arena|station\b|airport|embassy|office/i.test(x.name + ' ' + x.text.slice(0, 80));
+  const notSight = x => /universit|college|school|hospital|broadcast|headquarters|stadium|arena|station\b|airport|embassy|consulate|office/i.test(x.name + ' ' + x.text.slice(0, 80));
   const score = x => links(x) * (notSight(x) ? .3 : 1) + (x.text ? 2 : -6) + (x.wp || wd[x.qid]?.en ? 4 : 0) + (x.image ? 2 : 0) + (x.lat ? 1 : 0) + (x.kind === 'see' ? 1 : 0);
   const keepSights = sights.map((x, i) => ({ x, i, s: score(x) })).sort((a, b) => b.s - a.s || a.i - b.i).slice(0, 40).map(o => o.x);
   const famous = x => links(x) >= 8 && !!x.text;
@@ -311,17 +355,18 @@ async function buildAutoGuide(k) {
   const keep = [...keepSights, ...eats, ...drinks, ...buys, ...(areas.length ? [] : sleeps)];
 
   // Restaurants, markets and shops can have Wikipedia articles too (Jalan Alor, Central Market).
-  (await agByName(keep.filter(x => !x.qid && !x.wp && x.lat && !keepSights.includes(x))).catch(() => new Map())).forEach((v, x) => { x.qid = v.qid; x.wp = v.wp; });
+  (await agByName(keep.filter(x => !x.qid && !x.wp && !keepSights.includes(x)), centre).catch(miss(new Map()))).forEach(link);
   const eatery = x => x.kind === 'eat' || x.kind === 'drink';
-  const wpTitles = [...new Set([...keep.map(x => x.wp || wd[x.qid]?.en), ...keep.filter(eatery).map(agDish)].filter(Boolean))];
-  const wp = await agWikipedia(wpTitles).catch(() => ({}));
+  const wpTitles = [...new Set([...keep.map(x => x.wp || wd[x.qid]?.en), ...keep.filter(eatery).map(agDish), ...keep.filter(x => x.kind === 'do').map(agAct)].filter(Boolean))];
+  const wp = await agWikipedia(wpTitles).catch(miss({}));
   // Logos make poor cover photos, so they count as no photo.
   const usable = f => f && !/logo|\.svg$/i.test(f) ? f : '';
   const fileOf = x => usable(wp[x.wp || wd[x.qid]?.en]?.img) || usable(x.image.replace(/^(File|Image):/i, ''));
-  const found = await agCommonsSearch(keep.filter(x => !fileOf(x)).slice(0, 48), c.city).catch(() => new Map());
+  const found = await agCommonsSearch(keep.filter(x => !fileOf(x) && !(x.kind === 'do' && agAct(x))).slice(0, 48), c.city).catch(miss(new Map()));
   found.forEach((f, x) => { x.image = f; });
   const dishOf = x => eatery(x) && !fileOf(x) && usable(wp[agDish(x)]?.img) ? agDish(x) : '';
-  const cm = await agCommons([...new Set([...keep.map(fileOf), ...keep.map(dishOf).map(d => d && wp[d].img)].filter(Boolean))]).catch(() => ({}));
+  const actOf = x => x.kind === 'do' && !fileOf(x) && usable(wp[agAct(x)]?.img) ? agAct(x) : '';
+  const cm = await agCommons([...new Set([...keep.map(fileOf), ...keep.map(dishOf).map(d => d && wp[d].img), ...keep.map(actOf).map(d => d && wp[d].img)].filter(Boolean))]).catch(miss({}));
 
   const ids = new Set(), n = keepSights.length, t3 = Math.max(3, Math.min(8, Math.round(n * .15))), t2 = t3 + Math.round(n * .35);
   const items = keep.filter(x => { const w = wp[x.wp || wd[x.qid]?.en]; return x.lat || !w?.ll || reach(w.ll); }).map(x => {
@@ -337,7 +382,7 @@ async function buildAutoGuide(k) {
       why: sents[0] || '', d: sents.slice(1).join(' ').slice(0, 420), how: x.how.slice(0, 200), price: x.price.slice(0, 80), pc: agPrice(x.sec),
       area: x.page !== title ? x.page.split('/').pop() : '', ll,
       det: { addr: x.addr, hours: x.hours, phone: x.phone, web: x.url, wiki: w?.url ? { en: w.url } : null },
-      img: cm[fileOf(x)] || (dishOf(x) && cm[wp[dishOf(x)].img] ? { ...cm[wp[dishOf(x)].img], dish: dishOf(x) } : null)
+      img: cm[fileOf(x)] || (dishOf(x) && cm[wp[dishOf(x)].img] ? { ...cm[wp[dishOf(x)].img], dish: dishOf(x) } : null) || (actOf(x) && cm[wp[actOf(x)].img] ? { ...cm[wp[actOf(x)].img], act: actOf(x) } : null)
     };
   });
   const prose = (key, n = 2) => { const sub = Object.keys(secs).find(s => s.startsWith(key + '/') && agProse(secs[s], 1).length);
@@ -346,7 +391,7 @@ async function buildAutoGuide(k) {
   const safe = safeKey ? agProse(secs[safeKey], 7) : [];
   ['stay safe/scams', 'stay safe/crime'].forEach(s => secs[s] && safe.push(...agProse(secs[s], 3)));
   return {
-    v: AG_VER, code, title, at: Date.now(), items,
+    v: AG_VER, code, title, at: Date.now(), items, partial,
     lead: agSentences(agProse(secs[''] || '', 2).join(' ')).slice(0, 2).join(' '),
     buyTip: prose('buy'), stayTip: prose('sleep') || prose('districts'),
     areas: areas.map(a => ({ n: a.n, d: a.d.slice(0, 300), page: a.page })),
@@ -384,7 +429,7 @@ AG_KEYS.forEach(k => { const g = store.get(agKey(KEY_CODE[k])); if (g && g.v ===
 async function ensureAutoGuides(force) {
   for (const k of AG_KEYS) {
     const code = KEY_CODE[k], have = store.get(agKey(code));
-    if (!force && have && have.v === AG_VER && !(have.none && Date.now() - have.at > 7 * D)) continue;
+    if (!force && have && have.v === AG_VER && !(have.none && Date.now() - have.at > 7 * D) && !(have.partial && Date.now() - have.at > H)) continue;
     if (navigator.onLine === false || agStatus[k] === 'busy') continue;
     agStatus[k] = 'busy'; if (xCity === k) renderExplore();
     try {

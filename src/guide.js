@@ -330,7 +330,7 @@ function cover(it, kindKey) {
   const glyph = cjk ? it.l.slice(0, 4) : String(it.l || it.n).split(/[–,(&]/)[0].trim();
   const tier = it.tier ? `<span class="tier ${TIER[it.tier][1]}">${it.tier === 3 ? '★ ' : ''}${t(TIER[it.tier][0])}</span>` : '';
   // A dish photo stands in for a restaurant with no photo of its own, and says so.
-  const dish = ph?.dish ? `<span class="dishtag">${esc(t('Dish photo: {d}', { d: t(ph.dish) }))}</span>` : '';
+  const dish = ph?.dish ? `<span class="dishtag">${esc(t('Dish photo: {d}', { d: t(ph.dish) }))}</span>` : ph?.act ? `<span class="dishtag">${esc(t('Activity photo: {d}', { d: t(ph.act) }))}</span>` : '';
   const credit = ph ? `<details class="credit"><summary aria-label="Photo credit">i</summary><span>${t('Photo:')} <a href="${ph.page}" target="_blank" rel="noopener">${esc(ph.by)}</a> · ${esc(ph.license)}</span></details>` : '';
   return `<div class="cover${ph ? ' photo' : ''}" style="--c1:${c1};--c2:${c2}">${ph ? `<img src="${ph.src}" alt="${esc(it.tier ? nameOf(it) : t(it.n))}" loading="lazy" decoding="async">` : `<span class="glyph${cjk ? '' : ' latin'}" aria-hidden="true">${esc(glyph)}</span>`}${tier}${dish}${credit}</div>`;
 }
