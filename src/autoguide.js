@@ -291,7 +291,7 @@ async function buildAutoGuide(k) {
     keys.forEach(v => kept.set(v, x)); return true; });
 
   // Yearly events (a music festival in July) aren't places to visit on any date, so they're left out.
-  let sights = all.filter(x => (x.kind === 'see' || x.kind === 'do') && !/festival|carnival|regatta|marathon|parade|fair/i.test(x.name)).slice(0, 220);
+  let sights = all.filter(x => (x.kind === 'see' || x.kind === 'do') && !/festival|carnival|regatta|marathon|parade\b|fair\b/i.test(x.name)).slice(0, 220);
   (await agByName(sights.filter(x => !x.qid && !x.wp && x.lat).slice(0, 150)).catch(() => new Map())).forEach((v, x) => { x.qid = v.qid; x.wp = v.wp; });
   // Two listings that turn out to be the same Wikipedia article ("Kek Lok Si" and "Kek Lok Si Temple"): keep the fuller one.
   const byQ = new Map(); sights.forEach(x => { if (!x.qid) return; const o = byQ.get(x.qid); if (!o || x.text.length > o.text.length) byQ.set(x.qid, x); });
