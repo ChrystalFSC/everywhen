@@ -1485,7 +1485,7 @@ Flight number	航班号
 optional	选填
 Airline	航空公司
 Arrives before it departs. Check the dates and times.	到达时间早于出发时间，请检查日期和时间。
-That is a {d} flight. Check the dates.	这趟航班要飞{d}，请检查日期。
+Lands {d} after it departs. Check the arrival date.	起飞{d}后才落地，请检查到达日期。
 {d} flight	飞行{d}
 lands {day}	{day}落地
 Choose where flight {n} leaves from.	请选择航班 {n} 的出发地。

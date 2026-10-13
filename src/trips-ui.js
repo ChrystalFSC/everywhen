@@ -116,7 +116,7 @@ function legSummary(i) {
   if (!x) { el.textContent = ''; return; }
   const h = (x.arr - x.dep) / H;
   el.className = 'wleg-sum' + (h <= 0 || h > 22 ? ' bad' : '');
-  el.textContent = h <= 0 ? t('Arrives before it departs. Check the dates and times.') : h > 22 ? t('That is a {d} flight. Check the dates.', { d: dur(x.arr - x.dep) }) : t('{d} flight', { d: dur(x.arr - x.dep) }) + (l.arrD !== l.depD ? ' · ' + t('lands {day}', { day: new Date(l.arrD + 'T12:00Z').toLocaleDateString(LOCALE(), { weekday:'short', day:'numeric', month:'short', timeZone:'UTC' }) }) : '');
+  el.textContent = h <= 0 ? t('Arrives before it departs. Check the dates and times.') : h > 22 ? t('Lands {d} after it departs. Check the arrival date.', { d: dur(x.arr - x.dep) }) : t('{d} flight', { d: dur(x.arr - x.dep) }) + (l.arrD !== l.depD ? ' · ' + t('lands {day}', { day: new Date(l.arrD + 'T12:00Z').toLocaleDateString(LOCALE(), { weekday:'short', day:'numeric', month:'short', timeZone:'UTC' }) }) : '');
 }
 // One-way trips need an end date; round trips end when you land home.
 function syncWizard() {
@@ -130,8 +130,10 @@ $('#wLegs').addEventListener('input', e => {
   const f = e.target.closest('[data-k]'), i = +e.target.closest('.wleg')?.dataset.i; if (!f || isNaN(i)) return;
   const l = wiz.legs[i], k = f.dataset.k;
   if (f.classList.contains('apq')) { l[k] = ''; showAp(f); syncWizard(); return; }
-  l[k] = f.value.trim();
-  if (k === 'depD' && !l.arrD) { l.arrD = l.depD; $(`#w-arrD-${i}`).value = l.arrD; }
+  const was = l[k]; l[k] = f.value.trim();
+  // The arrival date follows the departure date unless it was set to a plausible next day (an overnight flight).
+  const gap = l.depD && l.arrD ? (Date.parse(l.arrD) - Date.parse(l.depD)) / D : 0;
+  if (k === 'depD' && l.depD && (!l.arrD || l.arrD === was || gap < 0 || gap > 1)) { l.arrD = l.depD; $(`#w-arrD-${i}`).value = l.arrD; }
   legSummary(i);
 });
 $('#wLegs').addEventListener('click', e => {
