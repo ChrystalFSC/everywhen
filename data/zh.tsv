@@ -1553,3 +1553,13 @@ Wikivoyage has no guide for {city} yet. Add places with <b>Can I go to…?</b> o
 Couldn’t build a guide for {city}. Wikivoyage may be blocked on this network, as it is in China. It will try again next time you’re online.	无法生成{city}的指南。当前网络可能屏蔽了 Wikivoyage（在中国就是如此）。下次联网时会再试。
 A guide for {city} is built the first time you open Everywhen with internet. Until then, add places with <b>Can I go to…?</b> on the Plan tab.	第一次联网打开 Everywhen 时会生成{city}的指南。在此之前，可以在“计划”页用<b>我能去…吗？</b>添加地点。
 Sights are sorted by how widely known they are around the world: ★ Top pick, then Worth it, then If you have time. Restaurants and shops keep the order Wikivoyage’s writers gave them. Places you added yourself come first, marked Yours.	景点按全球知名度排序：★ 必去，其次是值得一去，再次是有空再去。餐厅和商店保持 Wikivoyage 作者的顺序。你自己添加的地点排在最前，标为“我的”。
+fills in the times	自动填入时间
+Looking up {no} on {day}…	正在查询{day}的{no}…
+You’re offline, so the timetable can’t be checked. Type the times from your booking.	你已离线，无法查询时刻表。请按预订填写时间。
+This month’s free flight lookups are used up. Type the times from your booking.	本月的免费航班查询次数已用完。请按预订填写时间。
+The flight timetable couldn’t be reached. Type the times from your booking.	无法连接航班时刻表。请按预订填写时间。
+No timetable found for {no} on {day}. Check the number, or type the times from your booking.	没有找到{day}的{no}航班。请检查航班号，或按预订填写时间。
+The timetable says {route}, which differs from what you typed.	时刻表显示为{route}，与你填写的不同。
+Use the timetable	使用时刻表
+Filled in from the airline timetable: {route}. Check it against your booking.	已按航空公司时刻表填入：{route}。请与你的预订核对。
+Add your flights in order. Type the flight number and departure date, and the airports and times fill in from the airline timetable. You can also type the times from your booking; each is local to its airport.	按顺序添加航班。填写航班号和出发日期，机场和时间会按航空公司时刻表自动填入。也可以按预订自己填写时间，每个时间都是该机场的当地时间。

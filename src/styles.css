@@ -925,3 +925,14 @@ button.night.open:hover{border-color:rgba(232,178,26,.6)}
 .xcard.safe{grid-column:1/-1;border-color:var(--line-2);background:var(--glass)}
 .xcard.safe p{margin:0 0 10px;line-height:1.55}
 .xcard.safe p:last-child{margin-bottom:0}
+
+/* ---------- flight timetable lookup in the trip form ---------- */
+.wleg-find{margin:8px 2px 0;font-size:13px;line-height:1.45;color:var(--muted)}
+.wleg-find:empty{display:none}
+.wleg-find.busy{display:flex;align-items:center;gap:8px}
+.wleg-find.busy::before{content:"";flex:none;width:13px;height:13px;border-radius:50%;border:2px solid var(--out-soft);border-top-color:var(--out);animation:agspin .9s linear infinite}
+.wleg-find.good{color:var(--good)}
+.wleg-find.warn{color:var(--warn)}
+.wleg-find.bad{color:#B4235A}
+@media (prefers-reduced-motion:reduce){.wleg-find.busy::before{animation:none}}
+#wLegs [data-k="no"]{text-transform:uppercase}

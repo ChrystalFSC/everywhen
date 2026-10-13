@@ -66,12 +66,61 @@ $('#tripNew').addEventListener('click', () => { tripsDlg.close?.(); openWizard()
 $('#tripsClose').addEventListener('click', () => tripsDlg.close ? tripsDlg.close() : tripsDlg.removeAttribute('open'));
 $('#tripPick').addEventListener('click', openTrips);
 
+/* ---------- flight lookup ----------
+   With a flight number and a departure date, the form asks Everywhen's flight-lookup Worker (worker/flight-lookup.js,
+   which holds the AeroDataBox key) for the airline timetable, and fills in the airports and local times. */
+const FLIGHT_API = '';
+const FLIGHT_NO = /^([A-Z]{2}|[A-Z]\d|\d[A-Z])[A-Z]?\d{1,4}[A-Z]?$/;
+const flightAsk = {}, flightPending = {};
+const findMsg = (i, html, cls = '') => { wiz.find[i] = html ? `<p class="wleg-find ${cls}" id="w-find-${i}" aria-live="polite">${html}</p>` : ''; const el = $('#w-find-' + i); if (el) el.outerHTML = wiz.find[i] || `<p class="wleg-find" id="w-find-${i}" aria-live="polite"></p>`; };
+async function lookupLeg(i) {
+  const l = wiz.legs[i]; if (!FLIGHT_API || !l) return;
+  const no = l.no.toUpperCase().replace(/[\s-]+/g, ''), date = l.depD;
+  if (!FLIGHT_NO.test(no) || !date) { findMsg(i, ''); return; }
+  const day = new Date(date + 'T12:00Z').toLocaleDateString(LOCALE(), { weekday:'short', day:'numeric', month:'short', timeZone:'UTC' });
+  findMsg(i, esc(t('Looking up {no} on {day}…', { no, day })), 'busy');
+  let j;
+  try { j = await (flightAsk[no + date] ||= jget(`${FLIGHT_API}?no=${encodeURIComponent(no)}&date=${date}`, 15000)); }
+  catch (e) {
+    delete flightAsk[no + date];
+    if (wiz.legs[i] === l) findMsg(i, esc(t(navigator.onLine === false ? 'You’re offline, so the timetable can’t be checked. Type the times from your booking.' : /429/.test(e.message) ? 'This month’s free flight lookups are used up. Type the times from your booking.' : 'The flight timetable couldn’t be reached. Type the times from your booking.')), 'bad');
+    return;
+  }
+  if (wiz.legs[i] !== l || l.no.toUpperCase().replace(/[\s-]+/g, '') !== no || l.depD !== date) return; // changed while we were asking
+  const fl = j.flights || [];
+  const f = fl.find(x => x.from.airport.code === l.from && x.from.time.startsWith(date)) || fl.find(x => x.from.time.startsWith(date)) || fl[0];
+  if (!f) { findMsg(i, esc(t('No timetable found for {no} on {day}. Check the number, or type the times from your booking.', { no, day })), 'bad'); return; }
+  await loadAirports().catch(() => {});
+  const ap = a => { const d = AP_DB?.find(x => x.code === a.code); return d ? { code: d.code, city: d.city || d.name, name: d.name, cc: d.cc, tz: d.tz, lat: d.lat, lon: d.lon } : a.tz ? { ...a, city: a.city || a.name } : null; };
+  const A = ap(f.from.airport), B = ap(f.to.airport);
+  if (!A || !B) { findMsg(i, esc(t('No timetable found for {no} on {day}. Check the number, or type the times from your booking.', { no, day })), 'bad'); return; }
+  const next = { from: A.code, to: B.code, depD: f.from.time.slice(0, 10), depT: f.from.time.slice(11, 16), arrD: f.to.time.slice(0, 10), arrT: f.to.time.slice(11, 16), airline: f.airline };
+  const route = `${A.code} ${next.depT} → ${B.code} ${next.arrT}${next.arrD !== next.depD ? ' (+1)' : ''}`;
+  // Times you've already typed (from your booking) are never overwritten without asking.
+  const differs = ['from', 'to', 'depT', 'arrD', 'arrT'].some(k => l[k] && l[k] !== next[k]);
+  if (differs) {
+    flightPending[i] = { next, A, B, l };
+    findMsg(i, `${esc(t('The timetable says {route}, which differs from what you typed.', { route }))} <button class="linkbtn" type="button" data-wfill="${i}">${t('Use the timetable')}</button>`, 'warn');
+    return;
+  }
+  applyFlight(i, next, A, B, route);
+}
+function applyFlight(i, next, A, B, route) {
+  const l = wiz.legs[i];
+  wiz.picked[A.code] = A; wiz.picked[B.code] = B;
+  Object.assign(l, next, { airline: l.airline || next.airline || '' });
+  wiz.find[i] = '';
+  if (FLIGHT_API) $('#wHint').textContent = t('Add your flights in order. Type the flight number and departure date, and the airports and times fill in from the airline timetable. You can also type the times from your booking; each is local to its airport.');
+  renderLegs(); syncWizard();
+  findMsg(i, esc(t('Filled in from the airline timetable: {route}. Check it against your booking.', { route })), 'good');
+}
+
 /* ---------- create or edit a trip ---------- */
 let wiz = null; // { id, legs: [{ from, to, depD, depT, arrD, arrT, no, airline }], picked: { code: airport } }
 const blankLeg = from => ({ from: from || '', to: '', depD: '', depT: '', arrD: '', arrT: '', no: '', airline: '' });
 function openWizard(trip) {
-  wiz = trip ? { id: trip.id, name: trip.name, end: trip.end || '', cur: trip.homeCur || '', picked: { ...trip.airports }, legs: trip.legs.map(l => ({ from: l.from, to: l.to, depD: l.dep.slice(0, 10), depT: l.dep.slice(11, 16), arrD: l.arr.slice(0, 10), arrT: l.arr.slice(11, 16), no: l.no || '', airline: l.airline || '' })) }
-    : { id: null, name: '', end: '', cur: '', picked: {}, legs: [blankLeg()] };
+  wiz = trip ? { find: [], id: trip.id, name: trip.name, end: trip.end || '', cur: trip.homeCur || '', picked: { ...trip.airports }, legs: trip.legs.map(l => ({ from: l.from, to: l.to, depD: l.dep.slice(0, 10), depT: l.dep.slice(11, 16), arrD: l.arr.slice(0, 10), arrT: l.arr.slice(11, 16), no: l.no || '', airline: l.airline || '' })) }
+    : { find: [], id: null, name: '', end: '', cur: '', picked: {}, legs: [blankLeg()] };
   $('#wizT').textContent = t(trip ? 'Edit trip' : 'Create a trip');
   $('#wSave').textContent = t(trip ? 'Save trip' : 'Create trip');
   $('#wName').value = wiz.name; $('#wEnd').value = wiz.end; $('#wErr').textContent = '';
@@ -85,9 +134,15 @@ function openWizard(trip) {
 }
 function legHtml(l, i) {
   const ap = c => wiz.picked[c] ? apLabel(wiz.picked[c]) : '';
+  // With the timetable lookup on, the flight number comes first: with a date, it's all the form needs.
+  const NUMBER_ROW = `    <div class="wrow two">
+      <div class="field"><label for="w-no-${i}">${t('Flight number')} <small>${t(FLIGHT_API ? 'fills in the times' : 'optional')}</small></label><input id="w-no-${i}" data-k="no" value="${esc(l.no)}" autocomplete="off" autocapitalize="characters" placeholder="MH88"></div>
+      <div class="field"><label for="w-airline-${i}">${t('Airline')} <small>${t('optional')}</small></label><input id="w-airline-${i}" data-k="airline" value="${esc(l.airline)}" autocomplete="off"></div>
+    </div>`;
   return `<fieldset class="wleg" data-i="${i}">
     <legend>${t('Flight {n}', { n: i + 1 })}</legend>
     ${wiz.legs.length > 1 ? `<button class="wleg-x" type="button" data-wdel="${i}" aria-label="${t('Remove flight {n}', { n: i + 1 })}">✕</button>` : ''}
+    ${FLIGHT_API ? NUMBER_ROW : ''}
     <div class="wrow two">
       ${['from', 'to'].map(k => `<div class="field ap"><label for="w-${k}-${i}">${t(k === 'from' ? 'From' : 'To')}</label><input class="apq" id="w-${k}-${i}" data-k="${k}" value="${esc(ap(l[k]))}" placeholder="${t('City or airport code')}" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="w-${k}-${i}-list"><ul class="ac" id="w-${k}-${i}-list" role="listbox" hidden></ul></div>`).join('')}
     </div>
@@ -97,10 +152,8 @@ function legHtml(l, i) {
       <div class="field"><label for="w-arrD-${i}">${t('Arrives')}</label><input type="date" id="w-arrD-${i}" data-k="arrD" value="${l.arrD}"></div>
       <div class="field"><label for="w-arrT-${i}">${t('Local time')}</label><input type="time" id="w-arrT-${i}" data-k="arrT" value="${l.arrT}"></div>
     </div>
-    <div class="wrow two">
-      <div class="field"><label for="w-no-${i}">${t('Flight number')} <small>${t('optional')}</small></label><input id="w-no-${i}" data-k="no" value="${esc(l.no)}" autocomplete="off" placeholder="MH88"></div>
-      <div class="field"><label for="w-airline-${i}">${t('Airline')} <small>${t('optional')}</small></label><input id="w-airline-${i}" data-k="airline" value="${esc(l.airline)}" autocomplete="off"></div>
-    </div>
+    ${FLIGHT_API ? '' : NUMBER_ROW}
+    ${wiz.find?.[i] || `<p class="wleg-find" id="w-find-${i}" aria-live="polite"></p>`}
     <p class="wleg-sum" id="w-sum-${i}" aria-live="polite"></p>
   </fieldset>`;
 }
@@ -136,8 +189,15 @@ $('#wLegs').addEventListener('input', e => {
   if (k === 'depD' && l.depD && (!l.arrD || l.arrD === was || gap < 0 || gap > 1)) { l.arrD = l.depD; $(`#w-arrD-${i}`).value = l.arrD; }
   legSummary(i);
 });
+// Looking up the timetable once a flight number and a departure date are both in.
+$('#wLegs').addEventListener('change', e => {
+  const f = e.target.closest('[data-k="no"], [data-k="depD"]'), i = +e.target.closest('.wleg')?.dataset.i;
+  if (f && !isNaN(i)) lookupLeg(i);
+});
 $('#wLegs').addEventListener('click', e => {
-  const x = e.target.closest('[data-wdel]'); if (x) { wiz.legs.splice(+x.dataset.wdel, 1); renderLegs(); syncWizard(); return; }
+  const fill = e.target.closest('[data-wfill]');
+  if (fill) { const p = flightPending[fill.dataset.wfill]; if (p && wiz.legs[+fill.dataset.wfill] === p.l) applyFlight(+fill.dataset.wfill, p.next, p.A, p.B, `${p.A.code} ${p.next.depT} → ${p.B.code} ${p.next.arrT}${p.next.arrD !== p.next.depD ? ' (+1)' : ''}`); return; }
+  const x = e.target.closest('[data-wdel]'); if (x) { wiz.legs.splice(+x.dataset.wdel, 1); wiz.find = []; renderLegs(); syncWizard(); return; }
   const o = e.target.closest('[data-ap]'); if (o) pickAp(o.closest('.ap').querySelector('.apq'), o.dataset.ap);
 });
 $('#wLegs').addEventListener('keydown', e => {
