@@ -1561,6 +1561,8 @@ The flight timetable couldn’t be reached. Type the times from your booking.	�
 No timetable found for {no} on {day}. Check the number, or type the times from your booking.	没有找到{day}的{no}航班。请检查航班号，或按预订填写时间。
 The timetable says {route}, which differs from what you typed.	时刻表显示为{route}，与你填写的不同。
 Use the timetable	使用时刻表
-Filled in from the airline timetable: {route}. Check it against your booking.	已按航空公司时刻表填入：{route}。请与你的预订核对。
 Add your flights in order. Type the flight number and departure date, and the airports and times fill in from the airline timetable. You can also type the times from your booking; each is local to its airport.	按顺序添加航班。填写航班号和出发日期，机场和时间会按航空公司时刻表自动填入。也可以按预订自己填写时间，每个时间都是该机场的当地时间。
-{no} isn’t listed on {day}, but it flies {list}. Check the date on your booking.	{day}没有{no}航班，但{list}有。请核对预订上的日期。
+No timetable found for {no} on {day}. Timetables months ahead can be incomplete, so type the times from your booking.	没有找到{day}的{no}航班。几个月后的时刻表可能不完整，请按预订填写时间。
+Our timetable doesn’t list {no} on {day} yet (it can be incomplete months ahead). On {other} it’s {route}.	我们的时刻表暂未列出{day}的{no}（几个月后的数据可能不完整）。{other}的航班是{route}。
+Use these, then check against your booking	先用这个时间，再与预订核对
+Filled in from the timetable: {route}. Airlines change times, so check it against your booking.	已按时刻表填入：{route}。航空公司会调整时间，请与预订核对。

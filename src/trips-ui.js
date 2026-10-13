@@ -89,17 +89,27 @@ async function lookupLeg(i) {
   if (wiz.legs[i] !== l || l.no.toUpperCase().replace(/[\s-]+/g, '') !== no || l.depD !== date) return; // changed while we were asking
   const fl = j.flights || [];
   const f = fl.find(x => x.from.airport.code === l.from && x.from.time.startsWith(date)) || fl.find(x => x.from.time.startsWith(date)) || fl[0];
+  const ap = a => { const d = AP_DB?.find(x => x.code === a.code); return d ? { code: d.code, city: d.city || d.name, name: d.name, cc: d.cc, tz: d.tz, lat: d.lat, lon: d.lon } : a.tz ? { ...a, city: a.city || a.name } : null; };
   if (!f) {
     // Many flights don't run every day: say which nearby days it does fly, so a wrong date is easy to spot.
     const shift = n => new Date(Date.parse(date) + n * D).toISOString().slice(0, 10);
+    // Timetables months ahead are often incomplete, so a nearby day's flight is offered as a starting point, on your date.
     const near = (await Promise.all([-1, 1].map(n => (flightAsk[no + shift(n)] ||= jget(`${FLIGHT_API}?no=${encodeURIComponent(no)}&date=${shift(n)}`, 15000)).catch(() => null))))
-      .flatMap(x => x?.flights || []).filter(x => x.from.time).map(x => new Date(x.from.time.slice(0, 10) + 'T12:00Z').toLocaleDateString(LOCALE(), { weekday:'short', day:'numeric', month:'short', timeZone:'UTC' }) + ' ' + x.from.time.slice(11, 16));
+      .flatMap(x => x?.flights || []).filter(x => x.from.time && x.to.time);
     if (wiz.legs[i] !== l || l.depD !== date) return;
-    findMsg(i, esc(near.length ? t('{no} isn’t listed on {day}, but it flies {list}. Check the date on your booking.', { no, day, list: [...new Set(near)].join(LANG === 'zh' ? '、' : ' and ') }) : t('No timetable found for {no} on {day}. Check the number, or type the times from your booking.', { no, day })), 'bad');
+    const g = near.find(x => x.from.airport.code === l.from) || near[0];
+    if (!g) { findMsg(i, esc(t('No timetable found for {no} on {day}. Timetables months ahead can be incomplete, so type the times from your booking.', { no, day })), 'bad'); return; }
+    await loadAirports().catch(() => {});
+    const A2 = ap(g.from.airport), B2 = ap(g.to.airport);
+    if (!A2 || !B2) { findMsg(i, esc(t('No timetable found for {no} on {day}. Timetables months ahead can be incomplete, so type the times from your booking.', { no, day })), 'bad'); return; }
+    const gd = g.from.time.slice(0, 10), plus = Math.round((Date.parse(g.to.time.slice(0, 10)) - Date.parse(gd)) / D);
+    const next = { from: A2.code, to: B2.code, depD: date, depT: g.from.time.slice(11, 16), arrD: new Date(Date.parse(date) + plus * D).toISOString().slice(0, 10), arrT: g.to.time.slice(11, 16), airline: g.airline };
+    flightPending[i] = { next, A: A2, B: B2, l };
+    const other = new Date(gd + 'T12:00Z').toLocaleDateString(LOCALE(), { weekday:'short', day:'numeric', month:'short', timeZone:'UTC' });
+    findMsg(i, `${esc(t('Our timetable doesn’t list {no} on {day} yet (it can be incomplete months ahead). On {other} it’s {route}.', { no, day, other, route: `${A2.code} ${next.depT} → ${B2.code} ${next.arrT}` }))} <button class="linkbtn" type="button" data-wfill="${i}">${t('Use these, then check against your booking')}</button>`, 'warn');
     return;
   }
   await loadAirports().catch(() => {});
-  const ap = a => { const d = AP_DB?.find(x => x.code === a.code); return d ? { code: d.code, city: d.city || d.name, name: d.name, cc: d.cc, tz: d.tz, lat: d.lat, lon: d.lon } : a.tz ? { ...a, city: a.city || a.name } : null; };
   const A = ap(f.from.airport), B = ap(f.to.airport);
   if (!A || !B) { findMsg(i, esc(t('No timetable found for {no} on {day}. Check the number, or type the times from your booking.', { no, day })), 'bad'); return; }
   const next = { from: A.code, to: B.code, depD: f.from.time.slice(0, 10), depT: f.from.time.slice(11, 16), arrD: f.to.time.slice(0, 10), arrT: f.to.time.slice(11, 16), airline: f.airline };
@@ -120,7 +130,7 @@ function applyFlight(i, next, A, B, route) {
   wiz.find[i] = '';
   if (FLIGHT_API) $('#wHint').textContent = t('Add your flights in order. Type the flight number and departure date, and the airports and times fill in from the airline timetable. You can also type the times from your booking; each is local to its airport.');
   renderLegs(); syncWizard();
-  findMsg(i, esc(t('Filled in from the airline timetable: {route}. Check it against your booking.', { route })), 'good');
+  findMsg(i, esc(t('Filled in from the timetable: {route}. Airlines change times, so check it against your booking.', { route })), 'good');
 }
 
 /* ---------- create or edit a trip ---------- */
