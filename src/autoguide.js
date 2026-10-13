@@ -3,7 +3,7 @@
    become Explore cards and fill the day plan: sights ranked by how widely known they are (Wikipedia articles across
    languages, from Wikidata), with photos from Wikimedia Commons. It is built once per city while online and kept
    on this device, so Explore and the plan keep working offline. */
-const AG_VER = 3; // raising this rebuilds every saved guide with the current rules
+const AG_VER = 4; // raising this rebuilds every saved guide with the current rules
 const AG_LL = {}, AG_PHOTOS = {}, AG_DETAILS = {}, AG_META = {};
 const agKey = code => 'guide:' + code;
 const AG_KEYS = STOP_KEYS.filter(k => !CTX[k]);
@@ -235,17 +235,29 @@ async function agWikiSearch(list, centre, city) {
 // the place's name ("Jalan Alor at night.jpg" for Jalan Alor), so a nearby but unrelated photo is never used.
 const AG_PLAIN = new Set('the and national park museum temple restaurant restoran cafe café coffee kopitiam bar pub shop store mall centre center market food court house kitchen hotel'.split(' '));
 async function agCommonsSearch(list, city) {
-  const out = new Map(), cityWords = new Set(city.toLowerCase().split(/\s+/));
-  const words = s => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 2 && !AG_PLAIN.has(w) && !cityWords.has(w));
+  const out = new Map(), cityWords = city.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  const words = s => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 2 && !AG_PLAIN.has(w) && !cityWords.includes(w));
+  // Whole words only, so "Mirage Spa" never matches a photo of a Mirage jet at "Spangdahlem".
+  const fileWords = f => new Set(f.replace(/\.\w+$/, '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u));
   for (const part of chunk(list, 3)) await Promise.all(part.map(async x => {
-    const need = words(x.name); if (!need.length) return;
+    const need = words(x.name);
+    // Short, everyday names ("Bla Bla Bla", "See Good Food Centre") match unrelated photos: no search without a distinctive word.
+    if (!need.some(w => w.length >= 5)) return;
+    // A restaurant or shop also needs proof of place: the city in the file name, or a geotag within 2 km.
+    const strict = x.kind !== 'see' && x.kind !== 'do';
     // The name alone first: adding the city often pushes the right photos out of the results.
-    // Whole words only, so "Mirage Spa" never matches a photo of a Mirage jet at "Spangdahlem".
-    const fileWords = f => new Set(f.replace(/\.\w+$/, '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u));
     for (const q of [...new Set([x.name, need.join(' '), `${x.name} ${city}`])]) {
-      const j = await agGet(`https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&list=search&srnamespace=6&srlimit=8&srsearch=${encodeURIComponent(q)}`).catch(() => null);
-      const hit = (j?.query?.search || []).map(r => r.title.replace(/^File:/, '')).find(f => /\.(jpe?g|png|webp)$/i.test(f) && !/logo/i.test(f) && (fw => { const n = need.filter(w => fw.has(w)).length; return n === need.length || (need.length >= 3 && n >= need.length - 1); })(fileWords(f)));
-      if (hit) { out.set(x, hit); break; }
+      const j = await agGet(`https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&generator=search&gsrnamespace=6&gsrlimit=8&prop=coordinates&gsrsearch=${encodeURIComponent(q)}`).catch(() => null);
+      const pages = (j?.query?.pages || []).sort((a, b) => (a.index || 0) - (b.index || 0));
+      const hit = pages.find(p => {
+        const f = p.title.replace(/^File:/, ''), fw = fileWords(f), c = p.coordinates?.[0];
+        if (!/\.(jpe?g|png|webp)$/i.test(f) || /logo/i.test(f)) return false;
+        const n = need.filter(w => fw.has(w)).length;
+        if (!(n === need.length || (need.length >= 3 && n >= need.length - 1))) return false;
+        if (c && x.lat && km([c.lat, c.lon], [x.lat, x.lon]) > (strict ? 2 : 15)) return false;
+        return !strict || cityWords.every(w => fw.has(w)) || (c && x.lat);
+      });
+      if (hit) { out.set(x, hit.title.replace(/^File:/, '')); break; }
     }
   }));
   return out;
