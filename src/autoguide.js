@@ -62,6 +62,9 @@ function agProse(w, max = 3) {
   const out = []; let i = 0;
   while (i < w.length) {
     if (w.startsWith('{{', i)) { i = agEnd(w, i); continue; }
+    // A listing after a bullet ("* {{buy | name=…") spans lines: skip the whole template, not just its first line.
+    const lead = w.slice(i, i + 12).match(/^[*#:;]+\s*\{\{/);
+    if (lead) { i = agEnd(w, i + lead[0].length - 2); continue; }
     const nl = w.indexOf('\n', i), line = w.slice(i, nl < 0 ? w.length : nl); i = nl < 0 ? w.length : nl + 1;
     if (/^=/.test(line)) break;
     const t = agText(line.replace(/^[*#:;]+\s*/, ''));
@@ -287,7 +290,8 @@ async function buildAutoGuide(k) {
     if (dup) { if (x.text.length > dup.text.length) Object.assign(dup, x); return false; }
     keys.forEach(v => kept.set(v, x)); return true; });
 
-  let sights = all.filter(x => x.kind === 'see' || x.kind === 'do').slice(0, 220);
+  // Yearly events (a music festival in July) aren't places to visit on any date, so they're left out.
+  let sights = all.filter(x => (x.kind === 'see' || x.kind === 'do') && !/festival|carnival|regatta|marathon|parade|fair/i.test(x.name)).slice(0, 220);
   (await agByName(sights.filter(x => !x.qid && !x.wp && x.lat).slice(0, 150)).catch(() => new Map())).forEach((v, x) => { x.qid = v.qid; x.wp = v.wp; });
   // Two listings that turn out to be the same Wikipedia article ("Kek Lok Si" and "Kek Lok Si Temple"): keep the fuller one.
   const byQ = new Map(); sights.forEach(x => { if (!x.qid) return; const o = byQ.get(x.qid); if (!o || x.text.length > o.text.length) byQ.set(x.qid, x); });
@@ -386,8 +390,8 @@ async function ensureAutoGuides(force) {
     try {
       const g = await buildAutoGuide(k);
       store.set(agKey(code), g); agMerge(k, g, true); agStatus[k] = g.none ? 'none' : 'ok';
-      const empty = Object.values(plan.items).every(a => !a.some(id => BY[id] && !plan.custom[id]));
-      if (!g.none && empty) buildPlan(plan.prefs);
+      // A new guide fills that city's days that have nothing planned yet; Update leaves your plan alone.
+      if (!g.none && !force) fillCity(k);
     } catch (e) { agStatus[k] = 'err'; }
     renderDays(); renderExplore();
   }

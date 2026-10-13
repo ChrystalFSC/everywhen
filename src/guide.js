@@ -91,6 +91,39 @@ if (PRE && plan && plan.items && Object.keys(plan.items).some(k => +k < 1000)) {
 const getItem = id => BY[id] || plan.custom[id];
 const sortKey = it => it.custom ? 5 : ({ morning: it.k === 'food' ? 0 : .5, half:1, full:1, any: it.k === 'food' ? 2.5 : 2, afternoon: it.k === 'food' ? 3.2 : 3, evening: it.k === 'food' ? 3.8 : 4 })[it.when] ?? 2;
 
+// Plan scoring, shared by the full planner and by filling in one city when its guide arrives.
+const planScore = (it, prefs) => it.tier * 10 + it.tags.filter(t => prefs.interests.includes(t)).length * 4;
+const planFits = (it, win, budget) => win === 'full' ? it.when !== 'full' && (it.when !== 'half' || budget >= 7) : win === 'evening' ? ['evening','any'].includes(it.when) : ['morning','any'].includes(it.when);
+// One city's share of one day: meals first, then sights, near each other where possible.
+function fillSlot(x, city, win, budget, items, used, prefs) {
+  const score = it => planScore(it, prefs), fits = planFits, take = it => { used.add(it.id); items[x.d].push(it.id); };
+  const meals = win === 'full' || budget >= 6 ? 2 : 1;
+  let left = budget - meals * .75 - items[x.d].filter(id => BY[id]?.c === city && BY[id].k === 'place').reduce((a, id) => a + BY[id].hrs, 0);
+  let zone = items[x.d].map(id => BY[id]).find(i => i && i.c === city && i.k === 'place')?.zone || null;
+  const pool = ITEMS.filter(i => i.c === city && i.k === 'place' && i.when !== 'full').sort((a, b) => score(b) - score(a));
+  for (const pass of [0, 1]) for (const it of pool) {
+    if (left < .75) break;
+    if (used.has(it.id) || it.hrs > left + .1 || !fits(it, win, budget)) continue;
+    if (pass === 0 && zone && !near(zone, it.zone)) continue;
+    if (pass === 1 && left < 2) break;
+    take(it); left -= it.hrs; zone = zone || it.zone;
+  }
+  const foods = ITEMS.filter(i => i.c === city && i.k === 'food' && !used.has(i.id) && fits(i, win, budget)).sort((a, b) => (near(zone, b.zone) - near(zone, a.zone)) || score(b) - score(a));
+  foods.slice(0, meals - items[x.d].filter(id => BY[id]?.k === 'food' && BY[id].c === city).length).forEach(take);
+}
+// When a city's guide arrives after the plan exists (a trip with several cities), fill that city's empty days only.
+function fillCity(k) {
+  const used = new Set(Object.values(plan.items).flat());
+  let added = 0;
+  for (const x of DAYS) {
+    plan.items[x.d] ||= [];
+    if (plan.items[x.d].some(id => BY[id]?.c === k)) continue;
+    for (const [city, win, budget] of daySlots(x)) if (city === k) { const n = plan.items[x.d].length; fillSlot(x, city, win, budget, plan.items, used, plan.prefs); added += plan.items[x.d].length - n; }
+    plan.items[x.d].sort((a, b) => sortKey(getItem(a) || {}) - sortKey(getItem(b) || {}));
+  }
+  if (added) savePlan();
+  return added;
+}
 function buildPlan(prefs) {
   const base = Object.fromEntries(CHOOSABLE.map(d => [d, dayOf(d).city || 'sh']));
   const notes = [], used = new Set(), items = Object.fromEntries(DAYS.map(x => [x.d, []]));
@@ -99,27 +132,10 @@ function buildPlan(prefs) {
   const tripDays = PRE ? [19, 23, 21].map(PD) : CHOOSABLE.filter(d => dayOf(d).city === 'sh').sort((a, b) => weekday(b) - weekday(a));
   prefs.trips.filter(c => DAYTRIP_KEYS.includes(c)).forEach((c, i) => { const d = tripDays[i]; if (!d) return; base[d] = c; notes.push({ k: weekday(d) ? '{city} day trip on {day}, a weekday, so the famous sights are calmer.' : '{city} day trip on {day}.', city: c, d }); });
   plan = { ...plan, base, prefs, custom: plan?.custom || {} };
-  const score = it => it.tier * 10 + it.tags.filter(t => prefs.interests.includes(t)).length * 4;
-  const fits = (it, win, budget) => win === 'full' ? it.when !== 'full' && (it.when !== 'half' || budget >= 7) : win === 'evening' ? ['evening','any'].includes(it.when) : ['morning','any'].includes(it.when);
   const take = (d, it) => { used.add(it.id); items[d].push(it.id); };
   if (PRE && base[PD(20)] === 'sh') { take(PD(20), BY.yuyuan); take(PD(20), BY['f-tangyuan']); notes.push('Yu Garden on Sat 20 Feb for the Lantern Festival, with tangyuan, the festival dessert.'); }
   for (const x of DAYS) {
-    for (const [city, win, budget] of daySlots(x)) {
-      const meals = win === 'full' || budget >= 6 ? 2 : 1;
-      // Reserve time for meals first, then fill the rest with sights.
-      let left = budget - meals * .75 - items[x.d].filter(id => BY[id].c === city && BY[id].k === 'place').reduce((a, id) => a + BY[id].hrs, 0);
-      let zone = items[x.d].map(id => BY[id]).find(i => i.c === city && i.k === 'place')?.zone || null;
-      const pool = ITEMS.filter(i => i.c === city && i.k === 'place' && i.when !== 'full').sort((a, b) => score(b) - score(a));
-      for (const pass of [0, 1]) for (const it of pool) {
-        if (left < .75) break;
-        if (used.has(it.id) || it.hrs > left + .1 || !fits(it, win, budget)) continue;
-        if (pass === 0 && zone && !near(zone, it.zone)) continue;
-        if (pass === 1 && left < 2) break;
-        take(x.d, it); left -= it.hrs; zone = zone || it.zone;
-      }
-      const foods = ITEMS.filter(i => i.c === city && i.k === 'food' && !used.has(i.id) && fits(i, win, budget)).sort((a, b) => (near(zone, b.zone) - near(zone, a.zone)) || score(b) - score(a));
-      foods.slice(0, meals - items[x.d].filter(id => BY[id].k === 'food' && BY[id].c === city).length).forEach(f => take(x.d, f));
-    }
+    for (const [city, win, budget] of daySlots(x)) fillSlot(x, city, win, budget, items, used, prefs);
     items[x.d].sort((a, b) => sortKey(BY[a]) - sortKey(BY[b]));
   }
   const left = ITEMS.filter(i => BASE_KEYS.includes(i.c) && i.k === 'place' && i.tier === 3 && !used.has(i.id));
