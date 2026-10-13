@@ -1563,3 +1563,4 @@ The timetable says {route}, which differs from what you typed.	时刻表显示�
 Use the timetable	使用时刻表
 Filled in from the airline timetable: {route}. Check it against your booking.	已按航空公司时刻表填入：{route}。请与你的预订核对。
 Add your flights in order. Type the flight number and departure date, and the airports and times fill in from the airline timetable. You can also type the times from your booking; each is local to its airport.	按顺序添加航班。填写航班号和出发日期，机场和时间会按航空公司时刻表自动填入。也可以按预订自己填写时间，每个时间都是该机场的当地时间。
+{no} isn’t listed on {day}, but it flies {list}. Check the date on your booking.	{day}没有{no}航班，但{list}有。请核对预订上的日期。

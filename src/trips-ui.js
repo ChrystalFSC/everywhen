@@ -69,7 +69,7 @@ $('#tripPick').addEventListener('click', openTrips);
 /* ---------- flight lookup ----------
    With a flight number and a departure date, the form asks Everywhen's flight-lookup Worker (worker/flight-lookup.js,
    which holds the AeroDataBox key) for the airline timetable, and fills in the airports and local times. */
-const FLIGHT_API = '';
+const FLIGHT_API = 'https://everywhen-flights.chrystalfu123.workers.dev/';
 const FLIGHT_NO = /^([A-Z]{2}|[A-Z]\d|\d[A-Z])[A-Z]?\d{1,4}[A-Z]?$/;
 const flightAsk = {}, flightPending = {};
 const findMsg = (i, html, cls = '') => { wiz.find[i] = html ? `<p class="wleg-find ${cls}" id="w-find-${i}" aria-live="polite">${html}</p>` : ''; const el = $('#w-find-' + i); if (el) el.outerHTML = wiz.find[i] || `<p class="wleg-find" id="w-find-${i}" aria-live="polite"></p>`; };
@@ -89,7 +89,15 @@ async function lookupLeg(i) {
   if (wiz.legs[i] !== l || l.no.toUpperCase().replace(/[\s-]+/g, '') !== no || l.depD !== date) return; // changed while we were asking
   const fl = j.flights || [];
   const f = fl.find(x => x.from.airport.code === l.from && x.from.time.startsWith(date)) || fl.find(x => x.from.time.startsWith(date)) || fl[0];
-  if (!f) { findMsg(i, esc(t('No timetable found for {no} on {day}. Check the number, or type the times from your booking.', { no, day })), 'bad'); return; }
+  if (!f) {
+    // Many flights don't run every day: say which nearby days it does fly, so a wrong date is easy to spot.
+    const shift = n => new Date(Date.parse(date) + n * D).toISOString().slice(0, 10);
+    const near = (await Promise.all([-1, 1].map(n => (flightAsk[no + shift(n)] ||= jget(`${FLIGHT_API}?no=${encodeURIComponent(no)}&date=${shift(n)}`, 15000)).catch(() => null))))
+      .flatMap(x => x?.flights || []).filter(x => x.from.time).map(x => new Date(x.from.time.slice(0, 10) + 'T12:00Z').toLocaleDateString(LOCALE(), { weekday:'short', day:'numeric', month:'short', timeZone:'UTC' }) + ' ' + x.from.time.slice(11, 16));
+    if (wiz.legs[i] !== l || l.depD !== date) return;
+    findMsg(i, esc(near.length ? t('{no} isn’t listed on {day}, but it flies {list}. Check the date on your booking.', { no, day, list: [...new Set(near)].join(LANG === 'zh' ? '、' : ' and ') }) : t('No timetable found for {no} on {day}. Check the number, or type the times from your booking.', { no, day })), 'bad');
+    return;
+  }
   await loadAirports().catch(() => {});
   const ap = a => { const d = AP_DB?.find(x => x.code === a.code); return d ? { code: d.code, city: d.city || d.name, name: d.name, cc: d.cc, tz: d.tz, lat: d.lat, lon: d.lon } : a.tz ? { ...a, city: a.city || a.name } : null; };
   const A = ap(f.from.airport), B = ap(f.to.airport);
