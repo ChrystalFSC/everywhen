@@ -936,3 +936,4 @@ button.night.open:hover{border-color:rgba(232,178,26,.6)}
 .wleg-find.bad{color:#B4235A}
 @media (prefers-reduced-motion:reduce){.wleg-find.busy::before{animation:none}}
 #wLegs [data-k="no"]{text-transform:uppercase}
+.cover .dishtag{position:absolute;left:10px;bottom:10px;max-width:calc(100% - 52px);padding:3px 9px;border-radius:999px;background:rgba(46,36,85,.72);color:#fff;font-size:11.5px;font-weight:600;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}

@@ -1566,3 +1566,4 @@ No timetable found for {no} on {day}. Timetables months ahead can be incomplete,
 Our timetable doesn’t list {no} on {day} yet (it can be incomplete months ahead). On {other} it’s {route}.	我们的时刻表暂未列出{day}的{no}（几个月后的数据可能不完整）。{other}的航班是{route}。
 Use these, then check against your booking	先用这个时间，再与预订核对
 Filled in from the timetable: {route}. Airlines change times, so check it against your booking.	已按时刻表填入：{route}。航空公司会调整时间，请与预订核对。
+Dish photo: {d}	菜品示意图：{d}

@@ -3,7 +3,7 @@
    become Explore cards and fill the day plan: sights ranked by how widely known they are (Wikipedia articles across
    languages, from Wikidata), with photos from Wikimedia Commons. It is built once per city while online and kept
    on this device, so Explore and the plan keep working offline. */
-const AG_VER = 1;
+const AG_VER = 2; // raising this rebuilds every saved guide with the current rules
 const AG_LL = {}, AG_PHOTOS = {}, AG_DETAILS = {}, AG_META = {};
 const agKey = code => 'guide:' + code;
 const AG_KEYS = STOP_KEYS.filter(k => !CTX[k]);
@@ -201,6 +201,33 @@ async function agByName(list) {
   }
   return out;
 }
+// Wikimedia Commons, for places with no Wikipedia article: a photo whose file name contains every distinctive word of
+// the place's name ("Jalan Alor at night.jpg" for Jalan Alor), so a nearby but unrelated photo is never used.
+const AG_PLAIN = new Set('the and restaurant restoran cafe café coffee kopitiam bar pub shop store mall centre center market food court house kitchen hotel'.split(' '));
+async function agCommonsSearch(list, city) {
+  const out = new Map(), cityWords = new Set(city.toLowerCase().split(/\s+/));
+  const words = s => s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length > 2 && !AG_PLAIN.has(w) && !cityWords.has(w));
+  for (const part of chunk(list, 6)) await Promise.all(part.map(async x => {
+    const need = words(x.name); if (!need.length) return;
+    const j = await agGet(`https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&list=search&srnamespace=6&srlimit=8&srsearch=${encodeURIComponent(`${x.name} ${city}`)}`).catch(() => null);
+    const hit = (j?.query?.search || []).map(r => r.title.replace(/^File:/, '')).find(f => /\.(jpe?g|png|webp)$/i.test(f) && !/logo/i.test(f) && need.every(w => f.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').includes(w)));
+    if (hit) out.set(x, hit);
+  }));
+  return out;
+}
+// A restaurant with no photo of its own shows the dish it's known for, labelled as such. Most specific first.
+const AG_DISHES = [
+  [/banana[- ]leaf|daun pisang/i, 'Banana leaf rice'], [/food court|hawker|street food|food street|glutton|hutong/i, 'Hawker centre'], [/nasi lemak/i, 'Nasi lemak'], [/nasi kandar/i, 'Nasi kandar'], [/satay|\bsate\b/i, 'Satay'], [/laksa/i, 'Laksa'],
+  [/dim ?sum|yum cha/i, 'Dim sum'], [/roti canai|roti prata/i, 'Roti canai'], [/char k[wu]e?y? teow/i, 'Char kway teow'], [/chicken rice/i, 'Hainanese chicken rice'],
+  [/bak kut teh/i, 'Bak kut teh'], [/hokkien mee/i, 'Hokkien mee'], [/beef (noodle|ball)/i, 'Beef noodle soup'], [/wan ?ton|won ?ton/i, 'Wonton noodles'],
+  [/dosa|thosai/i, 'Dosa'], [/biryani|briyani/i, 'Biryani'], [/kaya|kopitiam/i, 'Kaya toast'], [/ramen/i, 'Ramen'], [/sushi/i, 'Sushi'], [/\bpho\b|phở/i, 'Pho'],
+  [/banh mi|bánh mì/i, 'Bánh mì'], [/bibimbap/i, 'Bibimbap'], [/korean (bbq|barbecue)|samgyeopsal|galbi/i, 'Korean barbecue'], [/mandu|dumpling|jiaozi|xiaolongbao/i, 'Dumpling'],
+  [/hot ?pot|steamboat|shabu/i, 'Hot pot'], [/tapas/i, 'Tapas'], [/pizza/i, 'Pizza'], [/burger/i, 'Hamburger'], [/steak/i, 'Steak'], [/fried chicken|\bchicken\b(?! rice)/i, 'Fried chicken'],
+  [/seafood|crab|prawn|lobster|oyster/i, 'Seafood'], [/curry/i, 'Curry'], [/noodle/i, 'Noodle'], [/bakery|pastr|cake|dessert/i, 'Pastry'], [/ice cream|gelato/i, 'Ice cream'],
+  [/cocktail/i, 'Cocktail'], [/beer|brew/i, 'Beer'], [/wine/i, 'Wine'], [/vegetarian|vegan/i, 'Vegetarian cuisine'], [/coffee|café|cafe/i, 'Coffee'], [/\btea\b|teahouse/i, 'Tea']
+];
+// The name says most ("Super Noodle House"), so it is matched before the description.
+const agDish = x => (AG_DISHES.find(([re]) => re.test(x.name)) || AG_DISHES.find(([re]) => re.test(x.text)))?.[1] || '';
 // English Wikipedia: each article's lead photo (free licences only) and coordinates.
 async function agWikipedia(titles) {
   const out = {};
@@ -279,10 +306,18 @@ async function buildAutoGuide(k) {
   const eats = pick(all.filter(x => x.kind === 'eat'), 28), drinks = pick(all.filter(x => x.kind === 'drink'), 8), buys = pick(all.filter(x => x.kind === 'buy'), 16), sleeps = pick(all.filter(x => x.kind === 'sleep'), 12);
   const keep = [...keepSights, ...eats, ...drinks, ...buys, ...(areas.length ? [] : sleeps)];
 
-  const wpTitles = [...new Set(keep.map(x => x.wp || wd[x.qid]?.en).filter(Boolean))];
+  // Restaurants, markets and shops can have Wikipedia articles too (Jalan Alor, Central Market).
+  (await agByName(keep.filter(x => !x.qid && !x.wp && x.lat && !keepSights.includes(x))).catch(() => new Map())).forEach((v, x) => { x.qid = v.qid; x.wp = v.wp; });
+  const eatery = x => x.kind === 'eat' || x.kind === 'drink';
+  const wpTitles = [...new Set([...keep.map(x => x.wp || wd[x.qid]?.en), ...keep.filter(eatery).map(agDish)].filter(Boolean))];
   const wp = await agWikipedia(wpTitles).catch(() => ({}));
-  const fileOf = x => wp[x.wp || wd[x.qid]?.en]?.img || x.image.replace(/^(File|Image):/i, '');
-  const cm = await agCommons([...new Set(keep.map(fileOf).filter(Boolean))]).catch(() => ({}));
+  // Logos make poor cover photos, so they count as no photo.
+  const usable = f => f && !/logo|\.svg$/i.test(f) ? f : '';
+  const fileOf = x => usable(wp[x.wp || wd[x.qid]?.en]?.img) || usable(x.image.replace(/^(File|Image):/i, ''));
+  const found = await agCommonsSearch(keep.filter(x => !fileOf(x)).slice(0, 48), c.city).catch(() => new Map());
+  found.forEach((f, x) => { x.image = f; });
+  const dishOf = x => eatery(x) && !fileOf(x) && usable(wp[agDish(x)]?.img) ? agDish(x) : '';
+  const cm = await agCommons([...new Set([...keep.map(fileOf), ...keep.map(dishOf).map(d => d && wp[d].img)].filter(Boolean))]).catch(() => ({}));
 
   const ids = new Set(), n = keepSights.length, t3 = Math.max(3, Math.min(8, Math.round(n * .15))), t2 = t3 + Math.round(n * .35);
   const items = keep.filter(x => { const w = wp[x.wp || wd[x.qid]?.en]; return x.lat || !w?.ll || reach(w.ll); }).map(x => {
@@ -297,7 +332,8 @@ async function buildAutoGuide(k) {
       n: x.name, l: agLocal(x.alt) || (sameName(wd[x.qid]?.local, x.name) ? '' : wd[x.qid]?.local || ''), ...shape,
       why: sents[0] || '', d: sents.slice(1).join(' ').slice(0, 420), how: x.how.slice(0, 200), price: x.price.slice(0, 80), pc: agPrice(x.sec),
       area: x.page !== title ? x.page.split('/').pop() : '', ll,
-      det: { addr: x.addr, hours: x.hours, phone: x.phone, web: x.url, wiki: w?.url ? { en: w.url } : null }, img: cm[fileOf(x)] || null
+      det: { addr: x.addr, hours: x.hours, phone: x.phone, web: x.url, wiki: w?.url ? { en: w.url } : null },
+      img: cm[fileOf(x)] || (dishOf(x) && cm[wp[dishOf(x)].img] ? { ...cm[wp[dishOf(x)].img], dish: dishOf(x) } : null)
     };
   });
   const prose = (key, n = 2) => { const sub = Object.keys(secs).find(s => s.startsWith(key + '/') && agProse(secs[s], 1).length);
