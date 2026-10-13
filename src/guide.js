@@ -90,6 +90,9 @@ if (PRE && plan && plan.items && Object.keys(plan.items).some(k => +k < 1000)) {
 }
 const getItem = id => BY[id] || plan.custom[id];
 const sortKey = it => it.custom ? 5 : ({ morning: it.k === 'food' ? 0 : .5, half:1, full:1, any: it.k === 'food' ? 2.5 : 2, afternoon: it.k === 'food' ? 3.2 : 3, evening: it.k === 'food' ? 3.8 : 4 })[it.when] ?? 2;
+// On a day in two cities (a morning in Kuala Lumpur, then a flight to Kuching), the first city's stops come first.
+const cityRank = (d, it) => { const ix = (dayOf(d)?.cities || []).indexOf(it?.c); return ix < 0 ? 0 : ix; };
+const dayKey = (d, it) => cityRank(d, it) * 10 + sortKey(it || {});
 
 // Plan scoring, shared by the full planner and by filling in one city when its guide arrives.
 const planScore = (it, prefs) => it.tier * 10 + it.tags.filter(t => prefs.interests.includes(t)).length * 4;
@@ -119,7 +122,7 @@ function fillCity(k) {
     plan.items[x.d] ||= [];
     if (plan.items[x.d].some(id => BY[id]?.c === k)) continue;
     for (const [city, win, budget] of daySlots(x)) if (city === k) { const n = plan.items[x.d].length; fillSlot(x, city, win, budget, plan.items, used, plan.prefs); added += plan.items[x.d].length - n; }
-    plan.items[x.d].sort((a, b) => sortKey(getItem(a) || {}) - sortKey(getItem(b) || {}));
+    plan.items[x.d].sort((a, b) => dayKey(x.d, getItem(a)) - dayKey(x.d, getItem(b)));
   }
   if (added) savePlan();
   return added;
@@ -136,7 +139,7 @@ function buildPlan(prefs) {
   if (PRE && base[PD(20)] === 'sh') { take(PD(20), BY.yuyuan); take(PD(20), BY['f-tangyuan']); notes.push('Yu Garden on Sat 20 Feb for the Lantern Festival, with tangyuan, the festival dessert.'); }
   for (const x of DAYS) {
     for (const [city, win, budget] of daySlots(x)) fillSlot(x, city, win, budget, items, used, prefs);
-    items[x.d].sort((a, b) => sortKey(BY[a]) - sortKey(BY[b]));
+    items[x.d].sort((a, b) => dayKey(x.d, BY[a]) - dayKey(x.d, BY[b]));
   }
   const left = ITEMS.filter(i => BASE_KEYS.includes(i.c) && i.k === 'place' && i.tier === 3 && !used.has(i.id));
   if (left.length) notes.push({ k: 'Not fitted in: {list}. Add it to a lighter day, or choose a faster pace.', list: left.map(i => i.id) });
@@ -146,6 +149,8 @@ function buildPlan(prefs) {
 }
 if (!plan || plan.v !== 2) { plan = { v:2, custom:{}, prefs: { ...DEFAULT_PREFS, trips: DAYTRIP_KEYS.slice() } }; buildPlan(plan.prefs); }
 DAYS.forEach(x => { plan.items[x.d] ||= []; });
+// Plans saved before stops were grouped by city: on two-city days, regroup them, keeping your order within each city.
+DAYS.filter(x => x.cities.length > 1).forEach(x => { const L = plan.items[x.d], r = L.map((id, i) => [cityRank(x.d, getItem(id)), i, id]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(e => e[2]); if (r.some((id, i) => id !== L[i])) { plan.items[x.d] = r; savePlan(); } });
 
 /* ---------- builder UI ---------- */
 function renderBuilder() {
@@ -248,8 +253,8 @@ function renderDays() {
   if (HAS_MAP && host.offsetParent !== null) restoreDayMaps();
 }
 function insertSorted(d, id) {
-  const L = plan.items[d], k = sortKey(getItem(id));
-  let i = L.findIndex(x => sortKey(getItem(x)) > k); if (i < 0) i = L.length;
+  const L = plan.items[d], k = dayKey(d, getItem(id));
+  let i = L.findIndex(x => dayKey(d, getItem(x)) > k); if (i < 0) i = L.length;
   L.splice(i, 0, id);
 }
 $('#days').addEventListener('click', e => {

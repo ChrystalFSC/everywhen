@@ -89,7 +89,10 @@ $('#xMapToggle')?.addEventListener('click', () => {
 /* ---------- Plan: each day's stops in order, with distances and a shorter-route suggestion ---------- */
 const dayMaps = {}, openDays = new Set();
 const legKm = (a, b) => km(a, b) * 1.3; // straight line to rough street distance
+// Further than this between two stops means a different city: that leg is your flight or long trip, not a taxi ride.
+const FAR_KM = 60;
 function legText(d) {
+  if (d > FAR_KM) return t('{km} · in another city, after your flight or long trip', { km: fmtKm(d) });
   if (d <= 1.4) return t('{km} · about {m} min walk', { km: fmtKm(d), m: Math.max(3, Math.round(d / 4.8 * 60 / 5) * 5) });
   return t('{km} · about {m} min by metro or taxi', { km: fmtKm(d), m: Math.round((10 + d / 22 * 60) / 5) * 5 });
 }
@@ -98,8 +101,8 @@ function dayEnds(d) {
   const wake = myStays.find(x => x.from < d && d <= x.to && x.ll), sleep = myStays.find(x => x.from <= d && d < x.to && x.ll);
   return { start: wake || null, end: sleep || null };
 }
-const whenRank = it => it.custom ? 1 : it.when === 'morning' ? 0 : it.when === 'evening' ? 2 : 1;
-function routeLen(pts) { let s = 0; for (let i = 1; i < pts.length; i++) s += legKm(pts[i - 1], pts[i]); return s; }
+const whenRank = (it, d) => (d ? cityRank(d, it) * 3 : 0) + (it.custom ? 1 : it.when === 'morning' ? 0 : it.when === 'evening' ? 2 : 1);
+function routeLen(pts) { let s = 0; for (let i = 1; i < pts.length; i++) { const k = legKm(pts[i - 1], pts[i]); if (k <= FAR_KM) s += k; } return s; }
 // Try every order of up to 7 stops, keeping mornings first and evenings last, with the hotels fixed.
 function bestOrder(d) {
   const ids = plan.items[d] || [], its = ids.map(getItem), lls = its.map(it => pointLL(itemPoint(it)));
@@ -109,7 +112,7 @@ function bestOrder(d) {
   let best = null, bestLen = cur;
   const perm = (arr, used) => {
     if (arr.length === ids.length) { const L2 = routeLen(wrap(arr)); if (L2 < bestLen - .01) { bestLen = L2; best = arr.slice(); } return; }
-    for (let i = 0; i < ids.length; i++) if (!used[i] && (!arr.length || whenRank(its[arr[arr.length - 1]]) <= whenRank(its[i]))) { used[i] = 1; arr.push(i); perm(arr, used); arr.pop(); used[i] = 0; }
+    for (let i = 0; i < ids.length; i++) if (!used[i] && (!arr.length || whenRank(its[arr[arr.length - 1]], d) <= whenRank(its[i], d))) { used[i] = 1; arr.push(i); perm(arr, used); arr.pop(); used[i] = 0; }
   };
   perm([], []);
   return best && cur - bestLen >= 1.5 && (cur - bestLen) / cur >= .15 ? { ids: best.map(i => ids[i]), save: cur - bestLen } : null;
@@ -125,7 +128,7 @@ function drawDayMap(d) {
     const it = getItem(id), p = itemPoint(it), ll = pointLL(p); if (!ll) return;
     const name = it.custom ? it.n : nameOf(it) + (p.spot ? ' · ' + (LANG === 'zh' && CITIES[it.c]?.lang === 'zh' ? p.spot.l : p.spot.n) : '');
     L.marker(ll, { icon: mkPin(i + 1, `t${it.tier || 1}`), title: `${i + 1}. ${name}`, keyboard: true }).addTo(layer)
-      .bindPopup(`<div class="pop"><b>${i + 1}. ${esc(name)}</b><a href="${mapLink(it.c || MAIN_KEY, p.spot ? p.spot.l : (it.l || it.n), ll)}" target="_blank" rel="noopener">${t(CITIES[it.c]?.lang === 'vi' ? 'Open in Google Maps' : 'Open in Amap')}</a></div>`);
+      .bindPopup(`<div class="pop"><b>${i + 1}. ${esc(name)}</b><a href="${mapLink(it.c || MAIN_KEY, p.spot ? p.spot.l : (it.l || it.n), ll)}" target="_blank" rel="noopener">${t(ccOfKey(it.custom ? MINE_CITY(it.c) : it.c || MAIN_KEY) === 'CN' ? 'Open in Amap' : 'Open in Google Maps')}</a></div>`);
     if (prev) rows.push(`<li><span class="lg-n">${prev.label} → ${i + 1}</span><span>${legText(legKm(prev.ll, ll))}</span></li>`);
     prev = { ll, label: String(i + 1) }; route.push(ll); stops++;
   });
