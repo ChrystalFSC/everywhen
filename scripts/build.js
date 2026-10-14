@@ -63,6 +63,18 @@ const swReg = `
 // Cache the app on first visit so it opens with no connection (e.g. on Chinese networks).
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // The app opens from its saved copy, so a new version arrives in the background. When it takes over: reload at
+  // once if the page has only just opened, otherwise offer a reload rather than interrupting.
+  const opened = Date.now(), hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || sessionStorage.getItem('swReloaded') === String(opened)) return;
+    if (Date.now() - opened < 10000) { try { sessionStorage.setItem('swReloaded', String(opened)); } catch {} location.reload(); return; }
+    const b = document.createElement('div');
+    b.className = 'update-bar'; b.setAttribute('role', 'status');
+    b.innerHTML = (document.documentElement.lang === 'zh-CN' ? '已有新版本。' : 'A new version is ready.') + ' <button type="button">' + (document.documentElement.lang === 'zh-CN' ? '刷新' : 'Reload') + '</button>';
+    b.querySelector('button').onclick = () => location.reload();
+    document.body.appendChild(b);
+  });
 }
 </script>`;
 const page = head + src.replace('</style>\n', '</style>\n</head>\n<body>\n') + swReg + '\n</body>\n</html>\n';

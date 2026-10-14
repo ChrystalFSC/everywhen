@@ -1011,6 +1011,10 @@ button.night.open:hover{border-color:oklch(79.2% calc(0.157 * var(--sy)) calc(va
 :root[data-theme="night"] .leaflet-control-attribution a{color:var(--out)}
 :root[data-theme="night"] .theme-btn{background:oklch(22% .045 var(--hp))}
 
+/* ---------- a new version is ready ---------- */
+.update-bar{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;border-radius:999px;background:var(--ink-k);color:#fff;font-size:14px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);max-width:calc(100% - 32px)}
+.update-bar button{min-height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--gold);color:var(--ink-k);font-weight:700}
+
 </style>
 </head>
 <body>
@@ -6292,6 +6296,18 @@ ensureAutoGuides(); addEventListener('online', () => ensureAutoGuides());
 // Cache the app on first visit so it opens with no connection (e.g. on Chinese networks).
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // The app opens from its saved copy, so a new version arrives in the background. When it takes over: reload at
+  // once if the page has only just opened, otherwise offer a reload rather than interrupting.
+  const opened = Date.now(), hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || sessionStorage.getItem('swReloaded') === String(opened)) return;
+    if (Date.now() - opened < 10000) { try { sessionStorage.setItem('swReloaded', String(opened)); } catch {} location.reload(); return; }
+    const b = document.createElement('div');
+    b.className = 'update-bar'; b.setAttribute('role', 'status');
+    b.innerHTML = (document.documentElement.lang === 'zh-CN' ? '已有新版本。' : 'A new version is ready.') + ' <button type="button">' + (document.documentElement.lang === 'zh-CN' ? '刷新' : 'Reload') + '</button>';
+    b.querySelector('button').onclick = () => location.reload();
+    document.body.appendChild(b);
+  });
 }
 </script>
 </body>

@@ -992,3 +992,7 @@ button.night.open:hover{border-color:oklch(79.2% calc(0.157 * var(--sy)) calc(va
 :root[data-theme="night"] .leaflet-popup-content-wrapper,:root[data-theme="night"] .leaflet-popup-tip,:root[data-theme="night"] .leaflet-bar a,:root[data-theme="night"] .leaflet-control-attribution{background:oklch(22% .045 var(--hp));color:var(--ink);border-color:var(--line-2)}
 :root[data-theme="night"] .leaflet-control-attribution a{color:var(--out)}
 :root[data-theme="night"] .theme-btn{background:oklch(22% .045 var(--hp))}
+
+/* ---------- a new version is ready ---------- */
+.update-bar{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;border-radius:999px;background:var(--ink-k);color:#fff;font-size:14px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);max-width:calc(100% - 32px)}
+.update-bar button{min-height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--gold);color:var(--ink-k);font-weight:700}
