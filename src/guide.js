@@ -325,7 +325,7 @@ function autoContext(k) {
 const COVER = { sh:['#9B80F5','#FFE08A'], sz:['#8B6CF0','#FFD95A'], hz:['#A58BFF','#FFF0B8'], han:['#B39BFF','#FFD95A'], sgn:['#8B6CF0','#F5C542'], stay:['#B9A5FF','#FFF6D6'], skip:['#E28AA8','#FFE3EC'] };
 function cover(it, kindKey) {
   const ph = PHOTOS[it.id];
-  const [c1, c2] = COVER[kindKey || it.c] || COVER.stay;
+  const [c1, c2] = (COVER[kindKey || it.c] || COVER.stay).map(tint);
   const cjk = /[㐀-鿿]/.test(it.l || '');
   const glyph = cjk ? it.l.slice(0, 4) : String(it.l || it.n).split(/[–,(&]/)[0].trim();
   const tier = it.tier ? `<span class="tier ${TIER[it.tier][1]}">${it.tier === 3 ? '★ ' : ''}${t(TIER[it.tier][0])}</span>` : '';

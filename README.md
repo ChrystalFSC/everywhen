@@ -48,6 +48,8 @@ For a city without a hand-picked guide, Everywhen reads its [Wikivoyage](https:/
 
 ## Design: Lilac & Butter
 
+The palette button in the header switches between five colour themes: Lilac & Butter (the default), Ocean & Coral, Lagoon & Mango, Rose & Peach and Slate & Sand. Each theme only changes the hue and colourfulness of the main and accent colours, in OKLCH, so every theme keeps the same lightness and text contrast (`src/theme.js`).
+
 A light, clean theme in soft purple and pale yellow, with no dark surfaces. White cards sit on a faint lilac page. The route map is a pale lavender panel with violet (outbound) and golden (return) routes. The split-flap clock flips purple digits on butter-yellow tiles. Light lilac marks what is selected, and sunflower yellow marks what you can act on: main buttons, play and “Top pick”.
 
 - **Living sky.** A very light wash behind the app follows the local time at whatever moment you're looking at: butter yellow at sunrise and sunset, near-white by day, soft lilac at night. A sun/moon badge on the map names the phase.

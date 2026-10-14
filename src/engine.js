@@ -54,8 +54,8 @@ function applySky(t, tz) {
   if (key === skyLast) return;
   skyLast = key;
   const r = document.documentElement.style;
-  r.setProperty('--sky-top', `rgb(${top})`); r.setProperty('--sky-bot', `rgb(${bot})`);
-  r.setProperty('--sun-glow', `rgba(${glow.slice(0, 3).map(Math.round)},${glow[3].toFixed(2)})`);
+  r.setProperty('--sky-top', tint(top)); r.setProperty('--sky-bot', tint(bot));
+  r.setProperty('--sun-glow', tint([...glow.slice(0, 3).map(Math.round), +glow[3].toFixed(2)]));
   r.setProperty('--night', night.toFixed(2));
   r.setProperty('--sun-x', `${Math.round(12 + Math.min(1, Math.max(0, sp)) * 76)}%`);
   r.setProperty('--sun-y', `${Math.round(8 + Math.pow(Math.abs(sp - .5) * 2, 2) * 34)}%`);
@@ -170,7 +170,7 @@ const scene = { kind: 'rain', raf: 0, drops: [], t0: 0 };
 const SCENE_BG = { rain: ['#F1EDFF', '#DCD3FA'], sun: ['#FFF3C4', '#EFE8FF'], cloud: ['#F4F1FF', '#E2DBF8'], storm: ['#E4DDF9', '#CBC0F0'], fog: ['#F6F4FF', '#E6E1F8'], snow: ['#FAF9FF', '#E8E3FA'] };
 function setScene(code) {
   scene.kind = wKind(code);
-  const [a, b] = SCENE_BG[scene.kind] || SCENE_BG.cloud, w = $('#wxHeroWrap');
+  const [a, b] = (SCENE_BG[scene.kind] || SCENE_BG.cloud).map(tint), w = $('#wxHeroWrap');
   if (w) { w.style.setProperty('--w1', a); w.style.setProperty('--w2', b); }
   drawScene(performance.now());
 }

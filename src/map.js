@@ -135,7 +135,7 @@ function drawDayMap(d) {
   if (end && end !== start) route.push(hotelMarker(end, layer));
   else if (end) route.push(end.ll);
   if (end && stops) rows.push(`<li><span class="lg-n">${prev.label} → ${esc(end.name)}</span><span>${legText(legKm(prev.ll, end.ll))}</span></li>`);
-  if (route.length > 1) L.polyline(route, { color: '#8B6CF0', weight: 3, opacity: .8, dashArray: '6 7' }).addTo(m);
+  if (route.length > 1) L.polyline(route, { color: tint('#8B6CF0'), weight: 3, opacity: .8, dashArray: '6 7' }).addTo(m);
   const missing = ids.filter(id => !pointLL(itemPoint(getItem(id)))).length;
   if (route.length > 1) m.fitBounds(route, { padding: [26, 26], maxZoom: 15 });
   else { const c = centreOf(plan.base[d] || DAYS.find(x => x.d === d).cities.slice(-1)[0]); route.length ? m.setView(route[0], 14) : m.setView([c[0], c[1]], c[2]); }
