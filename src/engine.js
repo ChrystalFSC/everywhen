@@ -48,7 +48,8 @@ function applySky(t, tz) {
   let i = 0; while (i < SKY.length - 2 && h >= SKY[i + 1][0]) i++;
   const [h0, t0, b0, g0, n0] = SKY[i], [h1, t1, b1, g1, n1] = SKY[i + 1], k = (h - h0) / (h1 - h0);
   const top = mix(hex(t0), hex(t1), k).map(Math.round), bot = mix(hex(b0), hex(b1), k).map(Math.round), glow = mix(rgbaP(g0), rgbaP(g1), k);
-  const night = n0 + (n1 - n0) * k;
+  // Night Flight keeps the stars out at every hour.
+  const night = THEME.dk ? Math.max(.85, n0 + (n1 - n0) * k) : n0 + (n1 - n0) * k;
   const sunUp = h > 5.6 && h < 18.8, sp = (h - 6) / 12;
   const key = top + '|' + bot + '|' + night.toFixed(2);
   if (key === skyLast) return;

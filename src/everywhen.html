@@ -496,7 +496,7 @@ function draw(now) {
     const done = intro < 1 ? show : legFrac(i, T);
     if (done > 0) {
       ctx.strokeStyle = col; ctx.lineWidth = lw;
-      ctx.shadowColor = col; ctx.shadowBlur = 16;
+      ctx.shadowColor = col; ctx.shadowBlur = THEME.dk ? 30 : 16; // routes glow brighter at night
       strokeCurve(q, 0, done);
       ctx.shadowBlur = 0;
     }
@@ -527,7 +527,7 @@ function draw(now) {
       ctx.globalAlpha = Math.min(1, labelA);
       const [dx, dy, al] = LBL[c.code]; ctx.textAlign = al; ctx.textBaseline = 'middle';
       ctx.font = `800 ${W < 420 ? 17 : 21}px ${colors['f-display']}`;
-      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.fillStyle = colors.ink;
+      ctx.lineWidth = 4; ctx.strokeStyle = THEME.dk ? 'rgba(8,10,28,.92)' : 'rgba(255,255,255,.95)'; ctx.fillStyle = colors.ink;
       ctx.strokeText(c.code, p.x + dx, p.y + dy - 7); ctx.fillText(c.code, p.x + dx, p.y + dy - 7);
       ctx.font = `500 ${W < 420 ? 10 : 11}px ${colors['f-mono']}`;
       ctx.fillStyle = colors.muted;

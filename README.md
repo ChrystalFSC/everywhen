@@ -48,7 +48,7 @@ For a city without a hand-picked guide, Everywhen reads its [Wikivoyage](https:/
 
 ## Design: Lilac & Butter
 
-The palette button in the header switches between five colour themes: Lilac & Butter (the default), Ocean & Coral, Lagoon & Mango, Rose & Peach and Slate & Sand. Each theme only changes the hue and colourfulness of the main and accent colours, in OKLCH, so every theme keeps the same lightness and text contrast (`src/theme.js`).
+The palette button in the header switches between six colour themes: Lilac & Butter (the default), Ocean & Coral, Lagoon & Mango, Rose & Peach, Slate & Sand, and **Night Flight**, a dark theme with a starfield, glowing gold and routes, and night-chart maps. Every colour in the stylesheet carries a night value switched by `--dk`, chosen by how it is used (text, surface or edge), so all text stays at 4.5:1 contrast or better at night too. Each theme only changes the hue and colourfulness of the main and accent colours, in OKLCH, so every theme keeps the same lightness and text contrast (`src/theme.js`).
 
 A light, clean theme in soft purple and pale yellow, with no dark surfaces. White cards sit on a faint lilac page. The route map is a pale lavender panel with violet (outbound) and golden (return) routes. The split-flap clock flips purple digits on butter-yellow tiles. Light lilac marks what is selected, and sunflower yellow marks what you can act on: main buttons, play and “Top pick”.
 

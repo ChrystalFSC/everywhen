@@ -8,7 +8,9 @@ const THEMES = [
   { id:'ocean',  n:'Ocean & Coral',  hp:250, sp:.9,  hy:45, sy:.95 },
   { id:'lagoon', n:'Lagoon & Mango', hp:200, sp:.8,  hy:75, sy:1 },
   { id:'rose',   n:'Rose & Peach',   hp:358, sp:.8,  hy:62, sy:.85 },
-  { id:'slate',  n:'Slate & Sand',   hp:262, sp:.32, hy:85, sy:.45 }
+  { id:'slate',  n:'Slate & Sand',   hp:262, sp:.32, hy:85, sy:.45 },
+  // Night Flight: the app at 35,000 ft. Deep navy, starlight and glowing routes; dk flips every colour to its night value.
+  { id:'night',  n:'Night Flight',   hp:270, sp:.85, hy:80, sy:1, dk:1 }
 ];
 const THEME_BASE = THEMES[0];
 let THEME = THEMES.find(x => x.id === store.get('theme')) || THEME_BASE;
@@ -56,15 +58,19 @@ function parseColor(c) {
 }
 const rgbStr = ([r, g, b, a = 1]) => a >= 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${+a.toFixed(3)})`;
 const tintCache = new Map();
-function tint(c) {
+// role 'keep': a fill that stays bright at night (gold buttons), so only its hue follows the theme.
+function tint(c, role) {
   if (THEME === THEME_BASE) return Array.isArray(c) ? rgbStr(parseColor(c)) : c;
-  const key = THEME.id + String(c);
+  const key = THEME.id + String(c) + (role || '');
   if (tintCache.has(key)) return tintCache.get(key);
   const v = parseColor(c), f = v && colorFamily(v);
   let out = Array.isArray(c) && v ? rgbStr(v) : c;
-  if (f) {
-    const [L, C, H] = rgbToOklch(v), shift = f === 'p' ? THEME.hp - THEME_BASE.hp : THEME.hy - THEME_BASE.hy;
-    out = rgbStr([...oklchToRgb(L, C * (f === 'p' ? THEME.sp : THEME.sy), (H + shift + 360) % 360), v[3]]);
+  if (f || (v && THEME.dk)) {
+    let [L, C, H] = rgbToOklch(v);
+    if (f) { H = (H + (f === 'p' ? THEME.hp - THEME_BASE.hp : THEME.hy - THEME_BASE.hy) + 360) % 360; C *= f === 'p' ? THEME.sp : THEME.sy; }
+    // At night, pale surfaces (sky, covers, scenes) become deep navy, as in the stylesheet.
+    if (THEME.dk && L >= .85 && role !== 'keep') { L = .13 + (L - .85) * .55; C += .035; if (!f) H = THEME.hp; }
+    out = rgbStr([...oklchToRgb(L, C, H), v[3]]);
   }
   tintCache.set(key, out); return out;
 }
@@ -83,7 +89,7 @@ function cssColor(v) {
 function applyTheme(t, quiet) {
   THEME = t; tintCache.clear();
   const r = document.documentElement;
-  r.style.setProperty('--hp', t.hp); r.style.setProperty('--sp', t.sp); r.style.setProperty('--hy', t.hy); r.style.setProperty('--sy', t.sy);
+  r.style.setProperty('--hp', t.hp); r.style.setProperty('--sp', t.sp); r.style.setProperty('--hy', t.hy); r.style.setProperty('--sy', t.sy); r.style.setProperty('--dk', t.dk || 0);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', tint('#FAF8FF'));
   r.dataset.theme = t.id; // the route map redraws itself when this changes
   if (quiet) return;
@@ -94,12 +100,14 @@ applyTheme(THEME, true);
 
 /* ---------- the button and its picker ---------- */
 const themeBtn = $('#themeBtn'), themePop = $('#themePop');
-function tintFor(t, c) { const keep = THEME; THEME = t; tintCache.clear(); const v = tint(c); THEME = keep; tintCache.clear(); return v; }
+function tintFor(t, c, role) { const keep = THEME; THEME = t; tintCache.clear(); const v = tint(c, role); THEME = keep; tintCache.clear(); return v; }
+// Each theme's swatch: its main colour (or, at night, its sky) and its accent.
+const swatchOf = x => `<i style="background:${tintFor(x, x.dk ? '#FAF8FF' : '#8B6CF0')}"></i><i style="background:${tintFor(x, '#FFD95A', 'keep')}"></i>`;
 function renderThemes() {
   themePop.innerHTML = `<p class="eyebrow">${t('Colour theme')}</p>` + THEMES.map(x => `<button type="button" role="radio" aria-checked="${x === THEME}" data-theme-id="${x.id}">
-    <span class="tsw" aria-hidden="true"><i style="background:${tintFor(x, '#8B6CF0')}"></i><i style="background:${tintFor(x, '#FFD95A')}"></i></span><span>${t(x.n)}</span></button>`).join('');
+    <span class="tsw" aria-hidden="true">${swatchOf(x)}</span><span>${t(x.n)}</span></button>`).join('');
 }
-function syncThemeBtn() { themeBtn.querySelector('.tsw').innerHTML = `<i style="background:${tint('#8B6CF0')}"></i><i style="background:${tint('#FFD95A')}"></i>`; themeBtn.setAttribute('aria-label', t('Colour theme: {n}', { n: t(THEME.n) })); }
+function syncThemeBtn() { themeBtn.querySelector('.tsw').innerHTML = swatchOf(THEME); themeBtn.setAttribute('aria-label', t('Colour theme: {n}', { n: t(THEME.n) })); }
 function closeThemes(focus) { themePop.hidden = true; themeBtn.setAttribute('aria-expanded', 'false'); if (focus) themeBtn.focus(); }
 themeBtn.addEventListener('click', () => {
   if (!themePop.hidden) { closeThemes(); return; }
