@@ -69,7 +69,7 @@ function tint(c, role) {
     let [L, C, H] = rgbToOklch(v);
     if (f) { H = (H + (f === 'p' ? THEME.hp - THEME_BASE.hp : THEME.hy - THEME_BASE.hy) + 360) % 360; C *= f === 'p' ? THEME.sp : THEME.sy; }
     // At night, pale surfaces (sky, covers, scenes) become deep navy, as in the stylesheet.
-    if (THEME.dk && L >= .85 && role !== 'keep') { L = .13 + (L - .85) * .55; C += .035; if (!f) H = THEME.hp; }
+    if (THEME.dk && L >= .85 && role !== 'keep') { L = .13 + (L - .85) * .55; C = C * .3 + .035; H = THEME.hp; }
     out = rgbStr([...oklchToRgb(L, C, H), v[3]]);
   }
   tintCache.set(key, out); return out;
