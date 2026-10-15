@@ -1388,7 +1388,9 @@ const THEMES = [
   { id:'night',  n:'Night Flight',   hp:270, sp:.85, hy:80, sy:1, dk:1 }
 ];
 const THEME_BASE = THEMES[0];
-let THEME = THEMES.find(x => x.id === store.get('theme')) || THEME_BASE;
+// A link can choose the theme (?theme=night), for sharing or screenshots, without changing the saved choice.
+const THEME_Q = THEMES.find(x => x.id === new URLSearchParams(location.search).get('theme'));
+let THEME = THEME_Q || THEMES.find(x => x.id === store.get('theme')) || THEME_BASE;
 
 /* ---------- sRGB ⇄ OKLCH ---------- */
 const toLin = c => (c /= 255) <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
@@ -1487,6 +1489,9 @@ function closeThemes(focus) { themePop.hidden = true; themeBtn.setAttribute('ari
 themeBtn.addEventListener('click', () => {
   if (!themePop.hidden) { closeThemes(); return; }
   renderThemes(); themePop.hidden = false; themeBtn.setAttribute('aria-expanded', 'true');
+  // Open towards the side with room: on phones the button sits at the left, on wide screens at the right.
+  const leftHalf = themeBtn.getBoundingClientRect().left < innerWidth / 2;
+  themePop.style.left = leftHalf ? '0' : 'auto'; themePop.style.right = leftHalf ? 'auto' : '0';
   themePop.querySelector('[aria-checked="true"]')?.focus();
 });
 themePop.addEventListener('click', e => {
@@ -5923,7 +5928,6 @@ function applyFlight(i, next, A, B, route) {
   wiz.picked[A.code] = A; wiz.picked[B.code] = B;
   Object.assign(l, next, { airline: l.airline || next.airline || '' });
   wiz.find[i] = '';
-  if (FLIGHT_API) $('#wHint').textContent = t('Add your flights in order. Type the flight number and departure date, and the airports and times fill in from the airline timetable. You can also type the times from your booking; each is local to its airport.');
   renderLegs(); syncWizard();
   findMsg(i, esc(t('Filled in from the timetable: {route}. Airlines change times, so check it against your booking.', { route })), 'good');
 }
@@ -5939,6 +5943,7 @@ function openWizard(trip) {
   $('#wName').value = wiz.name; $('#wEnd').value = wiz.end; $('#wErr').textContent = '';
   const curs = [...new Set(Object.values(COUNTRY).map(c => c[0]))].sort();
   $('#wCur').innerHTML = curs.map(c => `<option value="${c}">${c} · ${esc(curName(c))}</option>`).join('');
+  if (FLIGHT_API) $('#wHint').textContent = t('Add your flights in order. Type the flight number and departure date, and the airports and times fill in from the airline timetable. You can also type the times from your booking; each is local to its airport.');
   renderLegs(); syncWizard();
   wizDlg.showModal ? wizDlg.showModal() : wizDlg.setAttribute('open', '');
   (trip ? $('#wName') : $('#w-from-0'))?.focus();

@@ -128,7 +128,6 @@ function applyFlight(i, next, A, B, route) {
   wiz.picked[A.code] = A; wiz.picked[B.code] = B;
   Object.assign(l, next, { airline: l.airline || next.airline || '' });
   wiz.find[i] = '';
-  if (FLIGHT_API) $('#wHint').textContent = t('Add your flights in order. Type the flight number and departure date, and the airports and times fill in from the airline timetable. You can also type the times from your booking; each is local to its airport.');
   renderLegs(); syncWizard();
   findMsg(i, esc(t('Filled in from the timetable: {route}. Airlines change times, so check it against your booking.', { route })), 'good');
 }
@@ -144,6 +143,7 @@ function openWizard(trip) {
   $('#wName').value = wiz.name; $('#wEnd').value = wiz.end; $('#wErr').textContent = '';
   const curs = [...new Set(Object.values(COUNTRY).map(c => c[0]))].sort();
   $('#wCur').innerHTML = curs.map(c => `<option value="${c}">${c} · ${esc(curName(c))}</option>`).join('');
+  if (FLIGHT_API) $('#wHint').textContent = t('Add your flights in order. Type the flight number and departure date, and the airports and times fill in from the airline timetable. You can also type the times from your booking; each is local to its airport.');
   renderLegs(); syncWizard();
   wizDlg.showModal ? wizDlg.showModal() : wizDlg.setAttribute('open', '');
   (trip ? $('#wName') : $('#w-from-0'))?.focus();

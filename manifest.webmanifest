@@ -1,7 +1,7 @@
 {
   "name": "Everywhen",
   "short_name": "Everywhen",
-  "description": "Offline travel companion for KUL, Ho Chi Minh City, Shanghai and Hanoi.",
+  "description": "Offline travel companion: type in your flights and get the whole trip planned.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

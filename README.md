@@ -1,141 +1,223 @@
-# Everywhen
+<p align="center">
+  <img src="docs/hero.png" alt="Everywhen on three phones: the route map in the Lilac & Butter theme, the same map in Night Flight, and an Explore food card for xiaolongbao" width="100%">
+</p>
 
-**Every place on your trip, at every moment of it.** Everywhen is an offline travel companion that works behind the Great Firewall. It ships as a single HTML file with no dependencies and needs no connection to run.
+<p align="center">
+  <b>Every place on your trip, at every moment of it.</b><br>
+  Type in your flights. Everywhen plans the days, finds what to see and eat, and keeps working offline, even behind the Great Firewall.
+</p>
 
-Everywhen was built for a real trip: Kuala Lumpur → Ho Chi Minh City → Shanghai, returning through Hanoi, on four Vietnam Airlines flights with two overnight transfers. It puts everything a traveller needs on that route into one page that still works when Google, WhatsApp and most CDNs are blocked.
+<p align="center">
+  <a href="https://chrystalfsc.github.io/everywhen/"><b>Open the app →</b></a>
+  &nbsp;·&nbsp; <a href="#install-it-on-a-phone">Install on a phone</a>
+  &nbsp;·&nbsp; <a href="#develop">Develop</a>
+</p>
 
-## The wow feature: a map you can scrub through time
+---
 
-When the page opens, the route draws itself across a dot-matrix map of Southeast Asia. Drag the scrubber, or press play, and a plane flies each leg in order. As it moves:
+## A quick look
 
-- the local clock switches between GMT+8 and GMT+7
-- the current city pulses
-- the readout says where you are and what happens next, for example "VN524 leaves 09:20 from T2, in 5h 3m" or "Tonight: no hotel yet"
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/screens/trip.jpg" alt="Trip tab: route map with flights from Kuala Lumpur to Shanghai and back through Hanoi"><br><sub><b>Trip</b><br>Scrub through the trip; the plane, clocks and sky follow.</sub></td>
+    <td align="center" width="25%"><img src="docs/screens/plan.jpg" alt="Plan tab: a Suzhou day trip with noodles, a garden, a canal street and dinner"><br><sub><b>Plan</b><br>Every day planned for you, then yours to change.</sub></td>
+    <td align="center" width="25%"><img src="docs/screens/explore.jpg" alt="Explore tab: map of Shanghai with numbered pins above a card for the Bund"><br><sub><b>Explore</b><br>Ranked places on a map, with photos and details.</sub></td>
+    <td align="center" width="25%"><img src="docs/screens/trip-night.jpg" alt="The Trip tab in the dark Night Flight theme"><br><sub><b>Night Flight</b><br>One of six colour themes.</sub></td>
+  </tr>
+</table>
 
-The scrubber bar is deliberately not to scale. The flights are stretched so a 2-hour flight stays visible next to a 6-day stay.
+## From flights to a whole trip
 
-## Any trip, not just one
+You enter only your flights. Everything else is worked out from them.
 
-Everywhen started as a companion for one trip (Kuala Lumpur to Shanghai, February 2027), which ships as the built-in **example**. Anyone can now add their own: tap the trip name under the title, then **Create a trip**, and enter the flights the way they appear on a booking (airports by city or code, local departure and arrival times, optional flight number and airline). One-way trips ask for a last day instead of a flight home.
+```mermaid
+flowchart LR
+  F["✈️ Your flights<br/>airports + local times"] --> E{{"Trip engine"}}
+  E --> N["Nights<br/>where you sleep each night"]
+  E --> D["Days<br/>free hours, from landing<br/>and take-off times"]
+  E --> M["Route map<br/>and clocks per time zone"]
+  E --> C["Country details<br/>currency, language,<br/>emergency numbers"]
+  E --> W["Weather<br/>last year on your dates,<br/>then the live forecast"]
+  G[("Wikivoyage<br/>Wikipedia · Commons")] --> X["City guides<br/>sights, food, shops,<br/>areas, safety"]
+  D --> P["📅 Day plans"]
+  X --> P
+  classDef in fill:#FFF6D6,stroke:#E8B21A,color:#3E2F00
+  classDef core fill:#8B6CF0,stroke:#5B3FC4,color:#fff
+  classDef out fill:#F1ECFF,stroke:#B9ADE6,color:#2E2455
+  class F,G in
+  class E core
+  class N,D,M,C,W,X,P out
+```
 
-From those flights alone the app works out everything else:
+| Rule | How it works |
+|---|---|
+| **Stop or stay?** | Under 24 hours between flights is a transfer; longer is a stay. |
+| **Where you sleep** | Each night goes to the city you're in at 23:30 local time, or is marked as an overnight flight. |
+| **Free hours** | 08:00–22:00, starting 1.5 h after landing and ending 2.5 h before an international flight (1.5 h before a domestic one). |
+| **Time zones** | Every time is stored as an instant and shown in each airport's own zone, so "be back by" times and time changes are calculated, not typed. |
 
-- **Stops and nights.** A stop under 24 hours is a transfer; longer is a stay. Each night is placed in the city you are in at 23:30 local time, or marked as an overnight flight.
-- **Days and free hours.** Waking hours run 08:00–22:00, starting 1.5 hours after landing and ending 2.5 hours before an international flight (1.5 before a domestic one). Full days in one city can become day trips.
-- **The trip map** frames the airports anywhere in the world (routes across the Pacific are drawn on a 0–360° scale), and airports in the same city are drawn as one place.
-- **Clocks, currencies, languages and emergency numbers** come from each country, and the checklist is built from the destinations (entry rules, passport validity, unbooked nights, transfers, China's apps and payments, Grab in Southeast Asia).
-- **Weather:** where the guide has no hand-written climate notes, last year's weather on the same dates (Open-Meteo archive) stands in, with packing suggestions.
-
-Each trip keeps its own plan, stays, notes, checklist and saved forecasts. Switching trips reloads the app around the chosen one. Places, food and souvenirs are hand-picked for the example's cities. Every other city gets a guide built from Wikivoyage the first time the app is online (see below), and places you add with **Can I go to…?** appear in Explore with their details.
-
-### Guides for any city
-
-For a city without a hand-picked guide, Everywhen reads its [Wikivoyage](https://en.wikivoyage.org) article (and its district or town pages) and turns the listings into Explore cards: sights, restaurants, shops, areas to stay and safety advice. Sights are ranked by how widely known they are (the number of Wikipedia language editions covering them, from Wikidata), not by invented scores. Photos come from Wikimedia Commons with author and licence credits. The plan fills itself from the guide, grouping nearby places on the same day. The guide is built once per city in about 20 seconds, saved on the device so it works offline, and can be rebuilt with **Update** in Explore. Wikivoyage text is CC BY-SA and is credited on the page. Wikimedia sites are blocked in mainland China, so build guides before you fly there.
+<p align="center"><img src="docs/screens/trip-form.jpg" alt="The Create a trip form with a Kuala Lumpur to Seoul flight filled in" width="280"></p>
+<p align="center"><sub>Creating a trip: pick airports from all 7,917 with an IATA code. With a flight number and date, the times can fill in from the airline timetable.</sub></p>
 
 ## What's inside
 
-| Tab | What it does |
+| | Tab | What you get |
+|---|---|---|
+| 🗺️ | **Trip** | An animated route map with a time scrubber, local clocks, boarding-pass cards, layover "be back by" times, and every night of the trip with its hotel. |
+| 📅 | **Plan** | Day-by-day plans built from your pace and interests, nearby stops grouped together, a map with walking and taxi times, rain warnings, and a pre-trip checklist. |
+| 🧭 | **Explore** | Places, food, souvenirs, areas to stay and things to skip, ranked best first, with photos, opening hours, prices and a map. **Can I go to…?** checks any place against your trip. |
+| ⛅ | **Weather** | Typical weather for your dates with a packing list, then a live 16-day forecast. |
+| 💬 | **Say** | Type or speak to translate, a checked phrasebook, and a full-screen "take me to this address" card for drivers. |
+| 💱 | **Money** | Converts prices the way they're written locally (`350k`, `1.5tr`), so 20,000 is never misread as 200,000. |
+
+## Guides for any city
+
+The example cities have hand-picked guides. Every other city gets one built the first time the app is online, in about 20 seconds, then saved for offline use.
+
+```mermaid
+flowchart LR
+  A["Wikivoyage article<br/>+ district and town pages"] --> B["Listings<br/>see · do · eat · buy · sleep"]
+  B --> C["Ranked by how widely known<br/>Wikipedia editions, from Wikidata"]
+  B --> D["Photos with credits<br/>Wikipedia · Commons"]
+  C --> E["🧭 Explore cards"]
+  D --> E
+  E --> F["📅 Day plans<br/>places within 3 km grouped"]
+  classDef src fill:#FFF6D6,stroke:#E8B21A,color:#3E2F00
+  classDef step fill:#F1ECFF,stroke:#B9ADE6,color:#2E2455
+  classDef res fill:#8B6CF0,stroke:#5B3FC4,color:#fff
+  class A src
+  class B,C,D step
+  class E,F res
+```
+
+Photos are matched strictly: a file must name the place, and a restaurant's photo must also name the city or be geotagged within 2 km. When there's no reliable photo, a restaurant shows a labelled photo of the dish it's known for, and an activity shows one of the activity.
+
+| City | Sights with photos | Food with photos | Shops with photos |
+|---|:-:|:-:|:-:|
+| Kuala Lumpur | 40 / 40 | 32 / 36 | 10 / 16 |
+| Seoul | 40 / 40 | — | — |
+| Kuching | 22 / 25 | 26 / 28 | 2 / 2 |
+| Kota Kinabalu | 31 / 40 | 14 / 27 | 9 / 12 |
+
+<sub>Measured October 2026. Wikivoyage coverage varies: big cities are rich, small towns may have only a few listings.</sub>
+
+## Six colour themes
+
+<table>
+  <tr>
+    <td width="34%"><img src="docs/screens/themes.jpg" alt="The colour theme picker listing all six themes"></td>
+    <td>
+
+One button in the header switches the whole app, including the sky, maps and card covers.
+
+| Theme | Mood |
 |---|---|
-| **Trip** | Animated route map with a time scrubber, live clocks for KL, Vietnam and Shanghai, boarding-pass cards with local times and time-change notes, layover guidance with "be back by" times, and a night-by-night strip showing which nights are booked. **Your stays**: tap any night to add or edit a hotel (name, dates, local-language address, booking reference, price, free-cancellation date, notes). Stays fill the strip, the Plan tab's check-in and check-out notes and the Say tab's driver card, and are saved on the device. |
-| **Plan** | A smart trip builder. Pick a pace (relaxed, balanced or packed), your interests, and day trips to **Suzhou** or **Hangzhou**. It then plans every day: day trips go on weekdays when the sights are calmer, Yu Garden is pinned to the Lantern Festival, meal time is reserved, and stops are grouped by neighbourhood and ordered morning to evening. Any Shanghai day can switch to a day trip. You can add ranked stops or your own, and reorder, move or remove anything. Days warn when they are overpacked, and suggest indoor alternatives when the live forecast says rain. The pre-trip checklist sits underneath. **Map & distances** on each day shows the stops in order on a map, from and back to your pinned hotel, with the distance and rough walk or metro/taxi time between each, and offers a shorter order when the day zig-zags (mornings stay first, evenings last). |
-| **Move to another device** | Everything you enter is saved only in the browser you use, so the Plan tab offers **Move to another device**: a QR code, a link (Copy link or Share) or a `.json` file holding your plan, stays, your own places, notes, checklist and settings. The data is deflate-compressed into the link's `#fragment`, which browsers never send to a server, so nothing is uploaded. Opening a link, pasting a code or opening a file shows what it contains and what it would replace, and imports only when you tap Replace my data. On iPhone the home-screen app and Safari keep separate data, so paste the link inside the home-screen app. |
-| **Explore** | Photo cards for Shanghai, Suzhou, Hangzhou, Hanoi and Ho Chi Minh City, **sorted best first** (★ Top pick, Worth it, If you have time), each with a one-line reason it ranks where it does. A **Skip these** tab lists tourist traps, scams and overrated spots, each with a better alternative. Every card offers Add to plan, Show to driver or order, and Reviews, which copies the Chinese name for Dianping or Trip.com. **Food cards list where to eat**: named restaurants with address, estimated spend per person in yuan or dong with a ringgit estimate (from the Money tab rates), an Open in Amap (China) or Google Maps (Vietnam) link, and Show to driver. **Souvenirs** lists what's worth bringing home from each city, ranked best first, with shops, price per item, buying tips (fakes, sizing, tea seasons) and the same map and Show buttons. A **map** above the cards pins every place, restaurant or shop with numbers that match the cards; tap a pin for details, or a card number to jump to its pin. Places you add yourself (from Can I go to…? or typed in on a day) appear first in the matching tab and city, marked **Yours**, with a Wikipedia photo and description, the address in the local language, category, opening hours, website, phone, travel time and the checker's verdict. Their details are looked up once online and saved for offline use; a day trip you added yourself gets its own city button. Every guide card also carries built-in details: an **About** section from Wikipedia (English and Simplified Chinese), the address in the local language, opening hours in plain words, phone and website, plus a **notes** box. Restaurants and shops show opening hours and phone where OpenStreetMap has them. |
-| **Can I go to…?** | Type any place, in English or Chinese: a sight, town, restaurant, mall or hotel. Suggestions appear as you type. The app judges the place against this trip: **Great fit**, **Good fit**, **Possible but a long day**, **Needs a night away**, **Not a good fit**, or **We don’t recommend it**. It weighs travel time and mode (including bullet-train hubs like Suzhou, Hangzhou and Nanjing), time needed for that type of place, free hours per day, stops already planned nearby ("1.2 km from Wukang Road, already on Sun 21"), weekends, the Lantern Festival, the hotel-move day, Monday closures and the short Hanoi and Saigon stops. Hotels get a location check (distance to People’s Square, the Bund, Pudong and Hongqiao) and can fill in the driver card. It searches in three layers: the built-in guide (with aliases and typo tolerance, offline), live OpenStreetMap search (Photon while typing, Nominatim on Check, with “Did you mean” for ambiguous names), and Claude on the claude.ai version, where outside services are blocked. |
-| **Weather** | Typical February weather and a packing list for every city, including Suzhou and Hangzhou, plus a live 16-day forecast from Open-Meteo drawn as low-to-high range bars. |
-| **Say** | Type or speak to translate between English and Chinese or Vietnamese, in both directions. Verified phrasebook matches come first and work offline; anything else is machine-translated (MyMemory) and labelled so, with results cached for offline reuse. Every result can go full screen for a driver or be read aloud. |
-| **Money** | A VND/CNY ↔ MYR converter that understands how prices are written locally: `350k`, `1.5tr`, `350.000`. It dims trailing `,000` groups so you can't misread 20,000 as 200,000, and has quick banknote buttons. |
-| **Prep** | A checklist written for this route: hotel booking deadlines with live countdowns, entry rules, mobile payments, maps and data that work in China, and ride-hailing apps. |
+| **Lilac & Butter** | Soft purple and pale yellow (default) |
+| **Ocean & Coral** | Blue and coral |
+| **Lagoon & Mango** | Teal and mango |
+| **Rose & Peach** | Rose pink and peach |
+| **Slate & Sand** | Calm grey-blue and sand |
+| **Night Flight** | Deep navy, starlight, glowing gold routes |
 
-## Design: Lilac & Butter
+Themes change only the *hue* of the colours, in OKLCH, so text keeps the same contrast in every one. Night Flight gives each colour a night version chosen by how it's used (text, surface or edge), and an automated scan of every text element on all six tabs finds nothing under 4.5:1.
 
-The palette button in the header switches between six colour themes: Lilac & Butter (the default), Ocean & Coral, Lagoon & Mango, Rose & Peach, Slate & Sand, and **Night Flight**, a dark theme with a starfield, glowing gold and routes, and night-chart maps. Every colour in the stylesheet carries a night value switched by `--dk`, chosen by how it is used (text, surface or edge), so all text stays at 4.5:1 contrast or better at night too. Each theme only changes the hue and colourfulness of the main and accent colours, in OKLCH, so every theme keeps the same lightness and text contrast (`src/theme.js`).
+</td>
+<td width="30%"><img src="docs/screens/food-night.jpg" alt="An Explore food card in Night Flight, listing where to eat xiaolongbao with prices"></td>
+  </tr>
+</table>
 
-A light, clean theme in soft purple and pale yellow, with no dark surfaces. White cards sit on a faint lilac page. The route map is a pale lavender panel with violet (outbound) and golden (return) routes. The split-flap clock flips purple digits on butter-yellow tiles. Light lilac marks what is selected, and sunflower yellow marks what you can act on: main buttons, play and “Top pick”.
+Open the app with `?theme=night` (or `ocean`, `lagoon`, `rose`, `slate`) to choose a theme from a link.
 
-- **Living sky.** A very light wash behind the app follows the local time at whatever moment you're looking at: butter yellow at sunrise and sunset, near-white by day, soft lilac at night. A sun/moon badge on the map names the phase.
-- **Split-flap departure board.** The clock and flight code in the map readout flip like an airport Solari board.
-- **Glowing routes.** Sparks drift along each route, the plane leaves a contrail, and each city has a halo.
-- **Boarding passes that feel like tickets.** Notched edges, a barcode generated from the flight number, and a 3D tilt with a light sheen that follows your pointer.
-- **Cover art from local script.** Explore cards carry covers built from each place's own name, for example 外滩 or Phở bò, on city palettes: lantern red and gold for Shanghai, jade and lotus for Hanoi, neon dusk for Saigon.
-- **Details that respond.** A floating glass dock with a sliding indicator, staggered panel entrances, animated weather scenes (rain, sun rays, drifting clouds), money results that count up, toasts, and confetti when the checklist is complete.
-- **Typography.** Big Shoulders Display (condensed, signage-style) and JetBrains Mono, both SIL Open Font License, are embedded in the page as base64. They look the same offline and inside China.
+## Works offline, and in China
 
-Every animation is skipped when the device asks for reduced motion.
+```mermaid
+flowchart TB
+  subgraph Always["Always works, even offline or in China"]
+    direction LR
+    a1["Trip, nights<br/>and plans"] ~~~ a2["Built-in guides"] ~~~ a3["Phrasebook and<br/>driver cards"] ~~~ a4["Money converter"]
+  end
+  subgraph Once["Works offline once loaded online"]
+    direction LR
+    b1["City guides<br/>for new cities"] ~~~ b2["Maps you've viewed"] ~~~ b3["Translations<br/>you've made"] ~~~ b4["Last saved<br/>forecast and rates"]
+  end
+  subgraph Online["Needs a connection"]
+    direction LR
+    c1["Live forecast"] ~~~ c2["Exchange rates"] ~~~ c3["Flight timetable<br/>lookup"] ~~~ c4["New translations"]
+  end
+  Always ~~~ Once ~~~ Online
+  style Always fill:#E9F6EF,stroke:#1D7F53,color:#0F3D28
+  style Once fill:#FFF6D6,stroke:#E8B21A,color:#3E2F00
+  style Online fill:#F1ECFF,stroke:#B9ADE6,color:#2E2455
+```
 
-## Tech highlights
-
-- **No third-party requests at runtime.** No hosted fonts, no map tiles, no CDN scripts. The two Latin fonts are embedded, and Chinese and Vietnamese text uses the system CJK stack (PingFang SC, Microsoft YaHei, Noto Sans CJK), so it renders the same in Shanghai as anywhere else.
-- **The map is built into the file.** Natural Earth 50m land polygons ([world-atlas](https://github.com/topojson/world-atlas)) were turned into a 90 × 105 land mask at build time with point-in-polygon tests. The mask is stored as a 1.5 KB base64 bitset and drawn on Canvas 2D with device-pixel-ratio scaling, and the edges fade out with `destination-out` gradients.
-- **Correct time zones.** All times are stored as UTC timestamps and displayed with `Intl.DateTimeFormat` in each airport's IANA zone. Durations, "be back by" times and night-of-stay lookups are calculated, not typed in by hand.
-- **Non-linear scrubber.** It maps a weighted piecewise-linear slider onto real trip time and back again. Flights move along quadratic Bézier arcs, and the plane's heading comes from the curve's derivative.
-- **Smooth, efficient motion.** A single `requestAnimationFrame` loop draws a cached bitmap of the land dots plus a few paths each frame. It stops completely when nothing is moving or the map is off screen.
-- **Accessibility.** Tabs follow the ARIA tablist pattern with arrow, Home and End keys. The scrubber is a native `<input type=range>` with a descriptive `aria-valuetext`. The phrase dialog traps focus and closes with Esc. Focus rings are visible. With `prefers-reduced-motion`, the draw-in animation and pulsing are skipped. Light and dark themes both meet contrast requirements.
-- **Every state is handled.** It covers missing speech voices, a disabled "Show to driver" button until an address exists, unreadable amounts, missing rates, and being offline or unable to reach the rate service. Checklist ticks, the hotel address and rates are saved in `localStorage` when it's available, and the app still works fully when it isn't.
+Wikipedia, Wikivoyage and Google are blocked in mainland China, so open your guides once before you fly. The app tells you when something couldn't load and what still works.
 
 ## Install it on a phone
 
-Everywhen is an installable web app. A service worker (`sw.js`) caches the page and its icons on the first visit, so after that it opens with no connection.
+| | iPhone (Safari) | Android (Chrome) |
+|:-:|---|---|
+| **1** | Open <https://chrystalfsc.github.io/everywhen/> | Open <https://chrystalfsc.github.io/everywhen/> |
+| **2** | **Share → Add to Home Screen** | **⋮ → Install app** |
+| **3** | Open it once from the home screen while online | Open it once while online |
 
-1. Push this repo to GitHub, then go to **Settings → Pages**, set **Source** to *Deploy from a branch*, and choose `main` and `/ (root)`.
-2. On the phone, open `https://<your-username>.github.io/<repo>/` in Safari (iPhone) or Chrome (Android).
-3. On iPhone, tap **Share → Add to Home Screen**. On Android, choose **Install app**.
-4. Open it once from the home screen while online. From then on it works offline.
+After that it opens with no connection. New versions install themselves: the app reloads by itself if it has only just opened, or shows a **Reload** button if you're using it.
 
-`scripts/build.js` versions the offline cache from a hash of the page and photos, so installed copies update automatically the next time they open online.
+**Moving to another phone:** Plan tab → **Move to another device** gives a QR code, a link or a file. The data travels inside the link's `#fragment`, which browsers never send to a server.
 
 ## Develop
 
 ```bash
 node scripts/build.js
+```
+
+```bash
 python -m http.server 8765
 ```
 
-Then open http://localhost:8765. The service worker also runs on `localhost`.
+Then open <http://localhost:8765>. The build inlines everything into one `index.html` (styles, scripts, fonts, map data and Leaflet) and versions the offline cache in `sw.js`.
 
-| Path | What it is |
-|---|---|
-| `src/everywhen.html` | App markup and core logic |
-| `src/trip.js` | The trip model: time zones, the example trip, country tables, and the stops, nights and days derived from any trip's flights |
-| `src/trips-ui.js` | Your trips: switcher, create and edit form, airport search |
-| `data/airports.json` | Every airport with an IATA code: city, country, position, time zone ([mwgg/Airports](https://github.com/mwgg/Airports), MIT). Built by `scripts/make-airports.js`; loaded only when the trip form opens |
-| `src/guide-data.js` | Cities, ranked places and food, things to skip, where to stay |
-| `src/guide.js` | Smart planner and Explore |
-| `src/autoguide.js` | Guides for any city, built from Wikivoyage, Wikidata and Wikimedia Commons |
-| `src/translate.js` | Type-or-speak translator |
-| `src/evaluate.js`, `src/places-data.js` | “Can I go to…?” place checker and its offline destination list |
-| `src/i18n.js`, `data/zh.tsv` | English/Chinese switching and the Chinese dictionary |
-| `images/photos/`, `data/photos.json` | Card photos and their credits |
-| `src/styles.css` | The visual system: tokens, glass, sky, components |
-| `src/engine.js` | Experience layer: sky, split-flap board, motion, cover art, weather scenes |
-| `data/fonts/` | Embedded fonts (SIL Open Font License) |
-| `data/land-grid.json` | Pre-built land bitmap for the map (regenerate with `scripts/make-land-grid.js`) |
-| `scripts/build.js` | Injects the map data and writes `index.html` with the web-app manifest and service worker |
-| `index.html` | The built app that GitHub Pages serves |
-| `sw.js`, `manifest.webmanifest`, `icons/` | Offline cache, install metadata and home-screen icons (`icons/make.py` draws them) |
+```text
+src/
+  everywhen.html   markup and core logic        trip.js        trip model: stops, nights, days
+  styles.css       the visual system            trips-ui.js    create / edit / switch trips
+  theme.js         colour themes, tint()        autoguide.js   guides for any city
+  engine.js        sky, flip board, motion      guide.js       planner and Explore
+  map.js           Explore and day maps         evaluate.js    "Can I go to…?"
+  mine.js          your own places              transfer.js    move to another device
+  translate.js     translator                   i18n.js        English / 简体中文
+data/      airports, land grid, guide coordinates, details, photos, Chinese strings, fonts, Leaflet
+scripts/   build and data-gathering scripts
+worker/    flight-lookup.js, a Cloudflare Worker that keeps the timetable API key secret
+docs/      README images
+```
 
-Two optional network features use free endpoints that need no key. No API keys or environment variables are required.
-- **Update rates** calls `https://open.er-api.com/v6/latest/MYR`.
-- **Weather** calls `https://api.open-meteo.com/v1/forecast` with all six cities in one request.
-- **Translate** calls `https://api.mymemory.translated.net/get` for anything not in the phrasebook. The typed text is sent to MyMemory.
-- **Place search** calls `https://photon.komoot.io` for suggestions while typing and `https://nominatim.openstreetmap.org` on Check (OpenStreetMap data, ODbL). Guide coordinates are pre-fetched with `node scripts/fetch-coords.js`.
-- **Maps** load tiles from `https://tile.openstreetmap.org` (© OpenStreetMap contributors). The service worker keeps tiles you have viewed, up to 2,500, so maps you have looked at once work offline; pins, routes and distances work without tiles. Leaflet 1.9.4 (BSD-2-Clause) is bundled into the page. Restaurant and shop pins come from `node scripts/fetch-coords.js`, checked by hand against each address's district; ones that matched the wrong branch are left unpinned. Stays are located with Nominatim when saved, or pinned by tapping the map in the stay form.
-- **Your places** look details up with `https://nominatim.openstreetmap.org` (lookup and search), `https://www.wikidata.org` and `https://en.wikipedia.org` / `https://zh.wikipedia.org` (summaries and nearby articles). Their photos come from `thumb.wikimedia.org`, and the service worker keeps them once viewed. Wikipedia is blocked in China, so add places and open the Yours tab before you fly.
-- **Guide details** are gathered at build time by `node scripts/fetch-details.js` (Nominatim at one request per second; Wikipedia descriptions batched 20 per request) into `data/details.json`, so they need no connection and work inside China.
-- **On claude.ai** the page cannot reach outside services, so place checks and translations fall back to Claude through the artifact `sample` capability, on the viewer's own Claude account and only after they allow it.
+<details>
+<summary><b>Services it uses</b> (all optional; the app works without them)</summary>
 
-If either can't be reached, the app falls back to the last saved data, or to the built-in defaults and February averages.
+| Feature | Service | Key needed |
+|---|---|:-:|
+| Weather | [Open-Meteo](https://open-meteo.com) forecast and archive | No |
+| Exchange rates | [open.er-api.com](https://open.er-api.com) | No |
+| Translation | [MyMemory](https://mymemory.translated.net) | No |
+| Place search | [Photon](https://photon.komoot.io), [Nominatim](https://nominatim.openstreetmap.org) | No |
+| Maps | [OpenStreetMap](https://www.openstreetmap.org/copyright) tiles, [Leaflet](https://leafletjs.com) 1.9.4 (bundled) | No |
+| City guides and photos | [Wikivoyage](https://en.wikivoyage.org), [Wikidata](https://www.wikidata.org), Wikipedia, [Wikimedia Commons](https://commons.wikimedia.org) | No |
+| Flight timetables | [AeroDataBox](https://rapidapi.com/aedbx-aedbx/api/aerodatabox) through `worker/flight-lookup.js` | Yes, kept in the Worker |
 
-## Language
+</details>
 
-Everywhen switches between **English** and **简体中文** from the button in the header, instantly and without reloading. It starts in Chinese when the phone's language is Chinese. Every screen is translated: guide descriptions, verdicts, dates (2月19日周五), durations (2小时30分), and Chinese number words for Vietnamese prices (35万越南盾). In Chinese mode, places show their Chinese names first. Translations live in `data/zh.tsv`, one line per string, and `node scripts/i18n-check.js` lists anything untranslated.
+<details>
+<summary><b>Language</b></summary>
 
-## Photos and rankings
+Everywhen switches between **English** and **简体中文** instantly from the header, and starts in Chinese when the phone's language is Chinese. Dates, durations and prices are formatted for each language (2月19日周五, 2小时30分, 35万越南盾). Strings live in `data/zh.tsv`; `node scripts/i18n-check.js` lists anything untranslated.
 
-Place and food photos are the lead images of the matching Wikipedia articles, downloaded from Wikimedia Commons only when freely licensed (CC0, CC BY, CC BY-SA or public domain). Each card credits the author and licence and links to the file page. Refresh them with `node scripts/fetch-photos.js` and then `python scripts/shrink-photos.py`. For places whose article has no usable lead image, `node scripts/search-photos.js search` finds freely licensed candidates on Commons for review, and `node scripts/search-photos.js pick <id> <n>` approves one.
+</details>
 
-Rankings are editorial, based on how widely travellers regard each place. They are not live star ratings, and the app never shows invented scores. For live reviews, use the Reviews button to search the Chinese name on Dianping or Trip.com.
+<details>
+<summary><b>Photos, rankings and credits</b></summary>
 
-## Notes
+Built-in guide photos are lead images from Wikipedia articles, used only when freely licensed (CC0, CC BY, CC BY-SA or public domain); each card credits the author and licence. Rankings are editorial for the built-in guides and based on Wikipedia coverage for generated guides, never invented star ratings. Wikivoyage text is CC BY-SA and credited in the app. Fonts: Big Shoulders Display and JetBrains Mono (SIL Open Font License). Airport data: [mwgg/Airports](https://github.com/mwgg/Airports) (MIT). Map land data: Natural Earth via [world-atlas](https://github.com/topojson/world-atlas).
 
-- Entry rules, visa-free arrangements and app availability change over time. The checklist says so, and you should confirm with official sources before flying.
-- The flights and hotel in the demo are one real itinerary. To reuse Everywhen for another trip, change `LEGS`, `NIGHTS` and `CITY` at the top of the script.
+</details>
+
+<sub>Entry rules, visa arrangements and app availability change. The checklist says so; confirm with official sources before you fly.</sub>

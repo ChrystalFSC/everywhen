@@ -13,7 +13,9 @@ const THEMES = [
   { id:'night',  n:'Night Flight',   hp:270, sp:.85, hy:80, sy:1, dk:1 }
 ];
 const THEME_BASE = THEMES[0];
-let THEME = THEMES.find(x => x.id === store.get('theme')) || THEME_BASE;
+// A link can choose the theme (?theme=night), for sharing or screenshots, without changing the saved choice.
+const THEME_Q = THEMES.find(x => x.id === new URLSearchParams(location.search).get('theme'));
+let THEME = THEME_Q || THEMES.find(x => x.id === store.get('theme')) || THEME_BASE;
 
 /* ---------- sRGB ⇄ OKLCH ---------- */
 const toLin = c => (c /= 255) <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
@@ -112,6 +114,9 @@ function closeThemes(focus) { themePop.hidden = true; themeBtn.setAttribute('ari
 themeBtn.addEventListener('click', () => {
   if (!themePop.hidden) { closeThemes(); return; }
   renderThemes(); themePop.hidden = false; themeBtn.setAttribute('aria-expanded', 'true');
+  // Open towards the side with room: on phones the button sits at the left, on wide screens at the right.
+  const leftHalf = themeBtn.getBoundingClientRect().left < innerWidth / 2;
+  themePop.style.left = leftHalf ? '0' : 'auto'; themePop.style.right = leftHalf ? 'auto' : '0';
   themePop.querySelector('[aria-checked="true"]')?.focus();
 });
 themePop.addEventListener('click', e => {
