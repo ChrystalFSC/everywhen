@@ -92,15 +92,6 @@ flowchart LR
 
 Photos are matched strictly: a file must name the place, and a restaurant's photo must also name the city or be geotagged within 2 km. When there's no reliable photo, a restaurant shows a labelled photo of the dish it's known for, and an activity shows one of the activity.
 
-| City | Sights with photos | Food with photos | Shops with photos |
-|---|:-:|:-:|:-:|
-| Kuala Lumpur | 40 / 40 | 32 / 36 | 10 / 16 |
-| Seoul | 40 / 40 | — | — |
-| Kuching | 22 / 25 | 26 / 28 | 2 / 2 |
-| Kota Kinabalu | 31 / 40 | 14 / 27 | 9 / 12 |
-
-<sub>Measured October 2026. Wikivoyage coverage varies: big cities are rich, small towns may have only a few listings.</sub>
-
 ## Six colour themes
 
 <table>
