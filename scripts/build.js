@@ -34,6 +34,7 @@ const zh = {};
 read('data/zh.tsv').split(/\r?\n/).forEach(line => { if (!line || line.startsWith('#')) return; const i = line.indexOf('\t'); if (i > 0) zh[line.slice(0, i)] = line.slice(i + 1); });
 src = inject(src, '__ZH__', JSON.stringify(zh));
 src = inject(src, '/* __TRANSLATE__ */', read('src/translate.js'));
+src = inject(src, '/* __EXTRAS__ */', read('src/extras.js'));
 src = inject(src, '__PHOTOS__', read('data/photos.json').trim());
 src = inject(src, '__COORDS__', read('data/coords.json').trim());
 src = inject(src, '__DETAILS__', fs.existsSync(path.join(root, 'data/details.json')) ? read('data/details.json').trim() : '{}');

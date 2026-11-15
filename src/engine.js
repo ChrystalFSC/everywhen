@@ -133,12 +133,15 @@ function countUp(host) {
 
 /* ---------- toast ---------- */
 let toastT = 0;
-function toast(msg) {
+function toast(msg, act) {
   const t = $('#toast');
-  t.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>${esc(msg)}`;
+  t.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span class="toast-msg">${esc(msg)}</span>${act ? `<button type="button" class="toast-act">${esc(act.label)}</button>` : ''}`;
+  // An action (Undo) stays up longer, and runs once.
+  if (act) t.querySelector('.toast-act').onclick = () => { clearTimeout(toastT); t.hidden = true; act.fn(); };
   t.hidden = false; t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
-  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600);
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, act ? 8000 : 2600);
 }
+function undoToast(msg, fn) { toast(msg, { label: t('Undo'), fn }); }
 
 /* ---------- confetti ---------- */
 function confetti() {

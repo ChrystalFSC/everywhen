@@ -16,6 +16,7 @@ __STYLES__
   </header>
 
   <div class="layout">
+    <div class="today glass" id="todayCard" hidden></div>
     <!-- Map stage -->
     <section class="stage" aria-label="Route map and trip scrubber">
       <div class="map-wrap">
@@ -71,6 +72,7 @@ __STYLES__
           <div><b>This is an example trip.</b><p>Add your own flights and Everywhen plans your trip the same way: the map, your nights, day plans, weather, phrases and money.</p></div>
           <div class="acts"><button class="btn" type="button" id="sampleCreate">Create a trip</button><button class="btn ghost" type="button" id="sampleHide">Hide</button></div>
         </div>
+        <div class="install-note glass" id="installNote" hidden></div>
         <div class="clocks" id="clocks"></div>
         <div class="journey" id="journey"></div>
         <div class="sec-head"><h2>Where you sleep</h2><p id="nightsHead"></p></div>
@@ -82,6 +84,11 @@ __STYLES__
         </div>
         <p class="nights-hint">Tap a night to add or edit where you stay.</p>
         <div class="stays" id="stays"></div>
+        <div class="tools glass">
+          <div><b>Take your trip with you</b><p>Put your flights, stays and booking deadlines in your phone’s calendar, or send the itinerary to the people you’re travelling with.</p></div>
+          <label class="tools-opt"><input type="checkbox" id="icsPlans"> Include each day’s plan in the calendar</label>
+          <div class="acts"><button class="btn" type="button" id="icsBtn">Add to calendar</button><button class="btn ghost" type="button" id="shareTrip">Share itinerary</button><button class="btn ghost" type="button" id="printTrip">Print or save as PDF</button></div>
+        </div>
       </section>
 
       <!-- SAY -->
@@ -136,6 +143,23 @@ __STYLES__
             <button class="btn ghost" id="rateBtn" type="button">Update rates</button>
           </div>
         </div>
+        <div class="spend glass" id="spendBox">
+          <div class="sec-head"><h2 style="font-size:24px">Trip spending</h2><p id="spendLead">Note what you pay as you go. Saved on this device only.</p></div>
+          <form class="spend-form" id="spendForm" autocomplete="off" novalidate>
+            <div class="spend-row">
+              <div class="field"><label for="spAmt">Amount</label><input id="spAmt" inputmode="decimal" placeholder="e.g. 350k"></div>
+              <div class="field"><label for="spCur">Currency</label><select class="sel" id="spCur"></select></div>
+              <div class="field"><label for="spSplit">Split between</label><select class="sel" id="spSplit"></select></div>
+            </div>
+            <div class="spend-row two">
+              <div class="field"><label for="spWhat">What for <small>optional</small></label><input id="spWhat" placeholder="e.g. Dinner at Din Tai Fung"></div>
+              <div class="field"><label for="spCat">Category</label><select class="sel" id="spCat"></select></div>
+            </div>
+            <p class="spend-live" id="spLive" aria-live="polite"></p>
+            <div class="acts"><button class="btn" type="submit">Add</button></div>
+          </form>
+          <div id="spendOut"></div>
+        </div>
       </section>
 
       <!-- PLAN -->
@@ -161,6 +185,10 @@ __STYLES__
           <div><b id="progText">0 of 0</b><div class="hint" id="progSub">ready</div></div>
         </div>
         <div class="checks" id="checks"></div>
+        <div class="offcheck glass">
+          <div class="offcheck-top"><div><b>Ready for no internet?</b><p>Check what is already saved on this device before you fly.</p></div><button class="btn" type="button" id="offBtn">Check now</button></div>
+          <ul class="offlist" id="offList" aria-live="polite" hidden></ul>
+        </div>
         <div class="xfer-card glass">
           <div><b>Use Everywhen on another device</b><p>Your plan, hotels, places and notes are saved only on this device. Copy them to your phone with a link, QR code or file.</p></div>
           <button class="btn" type="button" data-xfer>Move to another device</button>
@@ -181,11 +209,15 @@ __STYLES__
             <button type="button" data-v="skip" aria-pressed="false">Skip these</button>
           </div>
         </div>
+        <div class="xfind" id="xFind">
+          <label class="sr" for="xQ">Search this city</label><input class="txt" id="xQ" type="search" placeholder="Search this city…" autocomplete="off" enterkeyhint="search">
+          <div class="picks" id="xFilt" role="group" aria-label="Filters"><button type="button" class="pick sm" data-f="top" aria-pressed="false">Top picks</button><button type="button" class="pick sm" data-f="fresh" aria-pressed="false">Not in my plan</button><button type="button" class="pick sm" data-f="indoor" id="xFiltIndoor" aria-pressed="false">Indoors</button><button type="button" class="pick sm" data-f="near" aria-pressed="false">Nearest first</button></div>
+        </div>
         <p class="context glass" id="xContext"></p>
         <p class="xsource" id="xSource" hidden></p>
         <p class="rank-note" id="xRank">Sorted best first. ★ Top pick, then Worth it, then If you have time. Places you added yourself come first, marked Yours. The rest are our editors’ picks, not live star ratings. Tap <b>Reviews</b> to copy a place’s Chinese name for Dianping (大众点评) or Trip.com.</p>
         <div class="xmap-wrap" id="xMapWrap" hidden>
-          <div class="xmap-bar"><p class="xmap-note" id="xMapNote"></p><button class="sbtn" id="xMapToggle" type="button" aria-expanded="true" aria-controls="xMap">Hide map</button></div>
+          <div class="xmap-bar"><p class="xmap-note" id="xMapNote"></p><button class="sbtn" type="button" data-locate>Near me</button><button class="sbtn" id="xMapToggle" type="button" aria-expanded="true" aria-controls="xMap">Hide map</button></div>
           <div class="xmap" id="xMap" role="region" aria-label="Map of these recommendations"></div>
         </div>
         <div class="xgrid" id="xGrid"></div>
@@ -203,6 +235,7 @@ __STYLES__
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div id="printDoc" aria-hidden="true"></div>
 
 <!-- Show overlay -->
 <dialog class="dlg dlg-wide" id="tripsDlg" aria-labelledby="tripsT">
@@ -683,6 +716,7 @@ function tick() {
     const next = LEGS.find(l => l.dep > now);
     ct.innerHTML = next ? t('Next: <b>{no}</b> in {d}', { no: next.no, d: dur(next.dep - now) }) : t(ROUND ? 'On the way home' : 'Enjoy your trip');
   } else ct.textContent = t('Trip complete · welcome home');
+  renderToday();
 }
 
 /* ---------------- journey cards ---------------- */
@@ -799,8 +833,8 @@ $('#sFrom').addEventListener('change', () => { const f = +$('#sFrom').value, to 
 $('#sCancelBtn').addEventListener('click', closeStay);
 $('#sDel').addEventListener('click', () => {
   if (!delArmed) { delArmed = true; $('#sDel').textContent = t('Tap again to delete'); return; }
-  const x = myStays.find(s => s.id === editing); myStays = myStays.filter(s => s.id !== editing);
-  saveStays(); closeStay(); toast(t('Deleted {name}', { name: x?.name || '' }));
+  const before = myStays.slice(), x = myStays.find(s => s.id === editing); myStays = myStays.filter(s => s.id !== editing);
+  saveStays(); closeStay(); undoToast(t('Deleted {name}', { name: x?.name || '' }), () => { myStays = before; saveStays(); });
 });
 $('#stayForm').addEventListener('submit', e => {
   e.preventDefault();
@@ -912,13 +946,24 @@ function renderAddr() {
   $('#addrName').addEventListener('input', upd); $('#addrText').addEventListener('input', upd);
   $('#addrShow').addEventListener('click', () => { const x = addr[lang]; openShow(P.lead + x.text.trim(), x.name ? x.name : '', 'Please take me to this address.'); });
 }
+// Phrases you starred, kept per language and shown first.
+const favs = store.get('favs', {});
 function renderPhrases() {
-  const P = phr(lang);
-  $('#phraseGroups').innerHTML = !P.groups.length ? `<p class="hint">${t('A checked phrasebook for {lang} is coming. Until then, type what you want to say in the translator above and show it full screen.', { lang: t(P.name) })}</p>` : P.groups.map(([g, list], gi) => `<div class="group"><h3>${g}</h3><div class="cards">${list.map(([en, lo, ro], i) =>
-    `<button class="phrase" type="button" data-g="${gi}" data-i="${i}"><span class="en">${esc(en)}</span><span class="lo" lang="${P.speech}">${esc(lo)}</span>${ro ? `<span class="ro">${esc(ro)}</span>` : ''}</button>`).join('')}</div></div>`).join('');
+  const P = phr(lang), mine = new Set(favs[lang] || []);
+  const card = ([en, lo, ro], gi, i) => `<div class="phrase-w"><button class="phrase" type="button" data-g="${gi}" data-i="${i}"><span class="en">${esc(en)}</span><span class="lo" lang="${P.speech}">${esc(lo)}</span>${ro ? `<span class="ro">${esc(ro)}</span>` : ''}</button><button class="fav" type="button" data-fav="${gi}:${i}" aria-pressed="${mine.has(en)}" aria-label="${esc(t(mine.has(en) ? 'Remove {p} from favourites' : 'Add {p} to favourites', { p: t(en) }))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></svg></button></div>`;
+  const starred = P.groups.flatMap(([, list], gi) => list.map((p, i) => [p, gi, i])).filter(([p]) => mine.has(p[0]));
+  $('#phraseGroups').innerHTML = !P.groups.length ? `<p class="hint">${t('A checked phrasebook for {lang} is coming. Until then, type what you want to say in the translator above and show it full screen.', { lang: t(P.name) })}</p>`
+    : (starred.length ? `<div class="group favs"><h3>Your favourites</h3><div class="cards">${starred.map(([p, gi, i]) => card(p, gi, i)).join('')}</div></div>` : `<p class="hint">Tap the star on a phrase to keep it at the top.</p>`)
+    + P.groups.map(([g, list], gi) => `<div class="group"><h3>${g}</h3><div class="cards">${list.map((p, i) => card(p, gi, i)).join('')}</div></div>`).join('');
   $('#sos').innerHTML = P.sos.map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('');
 }
 $('#phraseGroups').addEventListener('click', e => {
+  const f = e.target.closest('[data-fav]');
+  if (f) {
+    const [gi, i] = f.dataset.fav.split(':'), en = phr(lang).groups[gi][1][i][0], s = new Set(favs[lang] || []);
+    s.has(en) ? s.delete(en) : s.add(en); favs[lang] = [...s]; store.set('favs', favs); renderPhrases();
+    $(`#phraseGroups [data-fav="${gi}:${i}"]`)?.focus(); return;
+  }
   const b = e.target.closest('.phrase'); if (!b) return;
   const [en, lo, ro] = phr(lang).groups[b.dataset.g][1][b.dataset.i];
   openShow(lo, ro, en);
@@ -1287,6 +1332,7 @@ bindSeg('#wCity', v => { wCity = v; renderWeather(); });
 /* __TRANSFER__ */
 /* __TRIPSUI__ */
 /* __TRANSLATE__ */
+/* __EXTRAS__ */
 
 /* ---------------- tabs ---------------- */
 const TABS = ['trip','plan','explore','weather','say','money'];
@@ -1302,7 +1348,8 @@ function selectTab(name, focus) {
   if (name === 'weather') startScene(); else stopScene();
   if (name === 'weather' || name === 'plan') loadWeather();
   if (name === 'explore') renderExplore();
-  if (name === 'plan') renderDays();
+  if (name === 'plan') { renderDays(); scrollToToday(); }
+  if (name === 'money') renderSpend();
   if (name === 'trip' || innerWidth >= 1024) requestAnimationFrame(() => { if (fit()) { draw(performance.now()); kick(); } });
   if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
 }
@@ -1328,7 +1375,7 @@ $('#routeLabel').textContent = ROUTE_LABEL;
 $('#map').setAttribute('aria-label', t('Map of the route: {list}.', { list: [HOME.code, ...LEGS.map(l => l.to)].map(c => t(CITY[c].city)).join(' → ') }));
 readColors(); paintStars();
 renderJourney(); renderAddr(); renderPhrases(); renderBuilder(); renderDays(); renderExplore(); renderWeather();
-function rerenderAll() { syncThemeBtn(); tick(); renderJourney(); renderAddr(); renderPhrases(); renderBuilder(); renderDays(); renderExplore(); renderWeather(); renderPrep(); renderNotes(); renderConv(); renderRates(); trRender(trLast && trLast.text ? trLast : { kind:'empty' }); if ($('#ckOut').innerHTML) $('#ckOut').innerHTML = ''; updateReadout(); if (proj) draw(performance.now()); moveInd(); }
+function rerenderAll() { syncThemeBtn(); todayHtml = ''; tick(); renderSpend(); renderInstall(); if (!$('#offList').hidden) runOffCheck(); renderJourney(); renderAddr(); renderPhrases(); renderBuilder(); renderDays(); renderExplore(); renderWeather(); renderPrep(); renderNotes(); renderConv(); renderRates(); trRender(trLast && trLast.text ? trLast : { kind:'empty' }); if ($('#ckOut').innerHTML) $('#ckOut').innerHTML = ''; updateReadout(); if (proj) draw(performance.now()); moveInd(); }
 $('#langBtn').addEventListener('click', () => setLang(LANG === 'zh' ? 'en' : 'zh'));
 // A new colour theme: the sky, covers and maps are drawn in code, so they redraw in the new colours.
 document.addEventListener('themechange', () => { skyLast = ''; rerenderAll(); Object.keys(dayMaps).forEach(d => drawDayMap(+d)); });

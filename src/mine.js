@@ -148,8 +148,8 @@ $('#xGrid').addEventListener('click', async e => {
   if (del) {
     const id = del.dataset.mdel;
     if (delArmedMine !== id) { delArmedMine = id; del.textContent = t('Tap again to remove'); return; }
-    const n = plan.custom[id]?.n; delete plan.custom[id]; Object.keys(plan.items).forEach(d => plan.items[d] = plan.items[d].filter(x => x !== id)); delArmedMine = null;
-    savePlan(); renderDays(); renderExplore(); toast(t('Removed {n}', { n })); return;
+    const snap = planSnap(), n = plan.custom[id]?.n; delete plan.custom[id]; Object.keys(plan.items).forEach(d => plan.items[d] = plan.items[d].filter(x => x !== id)); delArmedMine = null;
+    savePlan(); renderDays(); renderExplore(); undoToast(t('Removed {n}', { n }), () => planRestore(snap)); return;
   }
 });
 $('#xGrid').addEventListener('change', e => {

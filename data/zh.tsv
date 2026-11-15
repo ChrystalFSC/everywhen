@@ -1577,3 +1577,124 @@ Lagoon & Mango	湖绿与芒果
 Rose & Peach	玫瑰与蜜桃
 Slate & Sand	石板灰与沙色
 Night Flight	夜航
+# On the trip: today, undo, clock times, near me, sharing, calendar, spending, install, offline check
+Undo	撤销
+Today	今天
+Next	接下来
+Drag to reorder	拖动以调整顺序
+Share this day	分享这一天
+ends about {time}	约 {time} 结束
+Closed on {day}. Move it to another day.	{day}不开放，请改到其他日子。
+Opens at {time}, after you get there.	{time} 才开门，比你到达的时间晚。
+Closes at {time}, before you get there.	{time} 关门，你到达时已关门。
+Closes at {time}. Go earlier, or allow less time.	{time} 关门。请早点去，或缩短游览时间。
+Cleared 1 stop	已清空 1 个行程点
+Cleared {n} stops	已清空 {n} 个行程点
+Swap in {name}	换成{name}
+Swapped {a} for {b}	已将{a}换成{b}
+No matches.	没有匹配的结果。
+No places match these filters.	没有符合这些筛选条件的地点。
+Nothing in {city} matches “{q}” here.	{city}的这一类里没有与“{q}”匹配的内容。
+{n} in {kind}	{kind}中有 {n} 个
+Clear search and filters	清除搜索和筛选
+{km} away	距你 {km}
+Search this city	搜索这座城市
+Search this city…	搜索这座城市…
+Filters	筛选
+Top picks	首选
+Not in my plan	未加入行程
+Nearest first	由近到远
+Near me	我的位置
+You are here	你在这里
+Update where I am	更新我的位置
+Show where I am	显示我的位置
+This device can’t share its location.	此设备无法提供位置。
+Finding where you are…	正在定位…
+You’re about {km} from {city}. Near me works once you’re there.	你距离{city}约 {km}。到达后即可使用“我的位置”。
+Showing distances from where you are.	正在显示与你当前位置的距离。
+Location is switched off for Everywhen. Allow it in your browser’s site settings.	Everywhen 的定位权限已关闭。请在浏览器的网站设置中允许。
+Couldn’t find where you are. Try again outdoors.	无法确定你的位置。请到室外再试一次。
+That stop is already on {day}	{day}已有这个行程点
+In the air to {city}. You land at {time} local time, in {d}.	正飞往{city}。当地时间 {time} 降落，还有{d}。
+Be at the airport by {time}.	请在 {time} 前到达机场。
+Add the address	添加地址
+No hotel booked for tonight.	今晚还没有预订住宿。
+Your plan picks up when you land.	降落后继续你的行程。
+Nothing planned today.	今天没有安排。
+Open today’s plan	查看今天的行程
+Take your trip with you	把行程带在身边
+Put your flights, stays and booking deadlines in your phone’s calendar, or send the itinerary to the people you’re travelling with.	把航班、住宿和预订截止时间加入手机日历，或把行程发给同行的人。
+Include each day’s plan in the calendar	把每天的行程也加入日历
+Add to calendar	加入日历
+Share itinerary	分享行程
+Print or save as PDF	打印或存为 PDF
+Times are local and approximate. Made with Everywhen.	时间均为当地时间，仅供参考。由 Everywhen 生成。
+Copied. Paste it into a message.	已复制，可粘贴到消息中。
+Couldn’t copy here. Use Print or save as PDF instead.	这里无法复制。请改用“打印或存为 PDF”。
+Leaves {a} at {t1} ({c1} time). Lands {b} at {t2} ({c2} time).	{t1}（{c1}时间）从 {a} 起飞，{t2}（{c2}时间）抵达 {b}。
+Free cancellation ends: {name}	免费取消截止：{name}
+1 stop	1 个行程点
+{n} stops	{n} 个行程点
+Calendar file ready with {n} events. Open it to add them to your calendar.	日历文件已生成，共 {n} 个日程。打开它即可加入你的日历。
+Trip spending	旅途花费
+Note what you pay as you go. Saved on this device only.	边走边记下每笔花费。仅保存在此设备上。
+Amount	金额
+Split between	几人分摊
+What for	用途
+Category	类别
+e.g. 350k	例如 350k
+e.g. Dinner at Din Tai Fung	例如 鼎泰丰晚餐
+Just me	只有我
+{n} people	{n} 人
+Food and drink	餐饮
+Getting around	交通
+Sights and tickets	景点与门票
+Where you stay	住宿
+Other	其他
+That doesn’t look like an amount. Try 350k or 42.50.	这不像是金额。试试 350k 或 42.50。
+Set the {cur} exchange rate above first.	请先在上方设置 {cur} 汇率。
+Your share: {a}, about {h}.	你的份额：{a}，约 {h}。
+About {h}.	约 {h}。
+Nothing noted yet. Add your first payment above.	还没有记录。在上方添加第一笔花费。
+Spent so far	目前已花费
+1 payment	1 笔
+{n} payments	{n} 笔
+about {a} a day over 1 day	1 天，日均约 {a}
+about {a} a day over {d} days	{d} 天，日均约 {a}
+your share of {n}	{n} 人分摊后你的份额
+Type the amount first.	请先输入金额。
+Added {a}	已添加 {a}
+Keep Everywhen on your home screen	把 Everywhen 放到主屏幕
+In Safari, tap Share, then Add to Home Screen. It then opens like an app, even with no internet.	在 Safari 中点“分享”，再点“添加到主屏幕”。之后它就像 App 一样打开，没有网络也能用。
+Install it to open like an app, even with no internet.	安装后可像 App 一样打开，没有网络也能用。
+Install	安装
+Not now	暂不
+Ready for no internet?	没有网络也能用吗？
+Check what is already saved on this device before you fly.	出发前检查哪些内容已保存在此设备上。
+Check now	立即检查
+Check again	重新检查
+The app itself	应用本身
+Saved. It opens with no connection.	已保存，没有网络也能打开。
+Not saved on this device yet. Open Everywhen from its web address once while online.	尚未保存到此设备。请在联网时通过网址打开一次 Everywhen。
+City guides	城市指南
+Not built yet: {list}. Open Explore once while online.	尚未生成：{list}。请在联网时打开一次“发现”。
+Saved for your city.	你的城市已保存。
+Saved for all {n} cities.	全部 {n} 座城市均已保存。
+Maps	地图
+Not viewed yet: {list}. Open each city’s map in Explore and zoom in on the areas you’ll visit.	尚未查看：{list}。请在“发现”中打开各城市的地图，并放大你要去的区域。
+The areas you have looked at are saved.	你看过的区域已保存。
+Not updated yet. Tap Update rates on the Money tab.	尚未更新。请在“货币”页点“更新汇率”。
+Weather forecast	天气预报
+Forecast saved on {u}.	已保存 {u} 的预报。
+No forecast saved yet. Open the Weather tab while online.	尚未保存预报。请在联网时打开“天气”页。
+Hotel addresses for drivers	给司机看的酒店地址
+No address in the local language yet for: {list}.	以下住宿还没有当地语言的地址：{list}。
+1 night has no stay yet.	还有 1 晚没有住宿。
+{n} nights have no stay yet.	还有 {n} 晚没有住宿。
+Every stay has its address.	每处住宿都有地址。
+Phrasebook, driver cards and money	短语手册、司机卡片和货币换算
+Always work offline. New translations need a connection.	始终可离线使用。新的翻译需要联网。
+Your favourites	你的收藏
+Tap the star on a phrase to keep it at the top.	点短语上的星标，可将它置顶。
+Remove {p} from favourites	取消收藏：{p}
+Add {p} to favourites	收藏：{p}

@@ -63,12 +63,27 @@ flowchart LR
 
 | | Tab | What you get |
 |---|---|---|
-| 🗺️ | **Trip** | An animated route map with a time scrubber, local clocks, boarding-pass cards, layover "be back by" times, and every night of the trip with its hotel. |
-| 📅 | **Plan** | Day-by-day plans built from your pace and interests, nearby stops grouped together, a map with walking and taxi times, rain warnings, and a pre-trip checklist. |
-| 🧭 | **Explore** | Places, food, souvenirs, areas to stay and things to skip, ranked best first, with photos, opening hours, prices and a map. **Can I go to…?** checks any place against your trip. |
+| 🗺️ | **Trip** | An animated route map with a time scrubber, local clocks, boarding-pass cards, layover "be back by" times, and every night of the trip with its hotel. During the trip a **Today** card leads with what's on now. |
+| 📅 | **Plan** | Day-by-day plans built from your pace and interests, with a start time for every stop, walking and taxi times between them, opening-hours and rain warnings, and a pre-trip checklist. Drag stops to reorder them; every change can be undone. |
+| 🧭 | **Explore** | Places, food, souvenirs, areas to stay and things to skip, ranked best first, with photos, opening hours, prices and a map. Search a city, filter it, or sort by distance from where you are. **Can I go to…?** checks any place against your trip. |
 | ⛅ | **Weather** | Typical weather for your dates with a packing list, then a live 16-day forecast. |
-| 💬 | **Say** | Type or speak to translate, a checked phrasebook, and a full-screen "take me to this address" card for drivers. |
-| 💱 | **Money** | Converts prices the way they're written locally (`350k`, `1.5tr`), so 20,000 is never misread as 200,000. |
+| 💬 | **Say** | Type or speak to translate, a checked phrasebook with your favourites on top, and a full-screen "take me to this address" card for drivers. |
+| 💱 | **Money** | Converts prices the way they're written locally (`350k`, `1.5tr`), so 20,000 is never misread as 200,000, and keeps a running total of what you've spent, with bill splitting. |
+
+## On the trip
+
+| | What it does |
+|---|---|
+| **Today** | While you're travelling, the app opens on today: your stops with times, the next flight and when to be at the airport, and tonight's hotel with its driver card. |
+| **Clock times** | Each day is laid out on the clock from when you can start (09:00, or once you've landed), adding the trip between stops. Meals and evening sights aren't placed before their time of day. |
+| **Opening hours** | A stop is flagged when the place is closed that day, opens after you arrive, or closes before you'd finish. Only places with known hours are checked. |
+| **Undo** | Removing, moving, swapping or clearing stops, and deleting a stay or a payment, each offer **Undo** for a few seconds. |
+| **Near me** | Shows where you are on the Explore and day maps and how far each place is. Your position stays on the device. |
+| **Rainy days** | When the forecast says rain, a day offers indoor sights to swap in with one tap. |
+| **Calendar** | Trip tab → **Add to calendar** saves an `.ics` file with your flights, stays and free-cancellation deadlines (with reminders), and each day's plan if you want it. |
+| **Share and print** | Send one day or the whole itinerary as text, or print it and save it as a PDF. |
+| **Spending** | Money tab → **Trip spending**. Each payment keeps its value in your home currency at that day's rate. |
+| **Ready for no internet?** | Plan tab → **Check now** lists what is already saved on the device: the app, guides, maps, rates and hotel addresses. |
 
 ## Guides for any city
 
@@ -176,6 +191,7 @@ src/
   map.js           Explore and day maps         evaluate.js    "Can I go to…?"
   mine.js          your own places              transfer.js    move to another device
   translate.js     translator                   i18n.js        English / 简体中文
+  extras.js        today, near me, calendar, sharing, spending, offline check
 data/      airports, land grid, guide coordinates, details, photos, Chinese strings, fonts, Leaflet
 scripts/   build and data-gathering scripts
 worker/    flight-lookup.js, a Cloudflare Worker that keeps the timetable API key secret

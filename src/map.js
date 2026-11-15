@@ -57,11 +57,18 @@ function renderExploreMap(list, kind) {
   });
   staysIn(xCity).forEach(x => pts.push(hotelMarker(x, xLayer)));
   const [la, lo, z] = centreOf(xCity);
+  hereMarker(xLayer, [la, lo]);
   // Frame the main cluster; far-out picks (a water town, Disneyland) keep their pins but don't zoom the map out.
   const mid = [med(pts.map(p => p[0])), med(pts.map(p => p[1]))], core = pts.filter(p => km(p, mid) <= 9);
   const view = core.length >= 2 ? core : pts;
   if (view.length > 1) xMap.fitBounds(view, { padding: [28, 28], maxZoom: 15 }); else if (view.length) xMap.setView(view[0], 15); else xMap.setView([la, lo], z);
   $('#xMapNote').textContent = t(kind === 'place' ? 'Numbers match the cards below. Gold pins are top picks; a green ring means it’s in your plan.' : 'Each pin is a recommended shop or restaurant; the number matches the card below.');
+}
+// Where you are, once Near me has found it: drawn when you're within reach of the city on the map.
+function hereMarker(layer, centre) {
+  if (!myLL || km(myLL, centre) > 150) return null;
+  L.circleMarker(myLL, { radius: 8, color: '#fff', weight: 3, fillColor: '#2F7BFF', fillOpacity: 1, className: 'here-dot' }).addTo(layer).bindPopup(`<div class="pop"><b>${t('You are here')}</b></div>`);
+  return myLL;
 }
 function flyTo(id) {
   const m = xMarkers[id]?.[0]; if (!m || !xMap) return;
@@ -136,6 +143,7 @@ function drawDayMap(d) {
   else if (end) route.push(end.ll);
   if (end && stops) rows.push(`<li><span class="lg-n">${prev.label} → ${esc(end.name)}</span><span>${legText(legKm(prev.ll, end.ll))}</span></li>`);
   if (route.length > 1) L.polyline(route, { color: tint('#8B6CF0'), weight: 3, opacity: .8, dashArray: '6 7' }).addTo(m);
+  { const c = centreOf(plan.base[d] || DAYS.find(x => x.d === d).cities.slice(-1)[0]); hereMarker(layer, [c[0], c[1]]); }
   const missing = ids.filter(id => !pointLL(itemPoint(getItem(id)))).length;
   if (route.length > 1) m.fitBounds(route, { padding: [26, 26], maxZoom: 15 });
   else { const c = centreOf(plan.base[d] || DAYS.find(x => x.d === d).cities.slice(-1)[0]); route.length ? m.setView(route[0], 14) : m.setView([c[0], c[1]], c[2]); }
@@ -143,6 +151,7 @@ function drawDayMap(d) {
   legs.innerHTML = (rows.length ? `<ol class="legs-l">${rows.join('')}</ol><p class="legs-t">${t('Total about {km} between stops.', { km: fmtKm(total) })}</p>` : `<p class="legs-t">${t(ids.length ? 'Add another stop to see distances between them.' : 'Add stops to see them on the map.')}</p>`)
     + (missing ? `<p class="legs-t">${t(missing === 1 ? '1 stop has no map location.' : '{n} stops have no map location.', { n: missing })}</p>` : '')
     + (!start && !end && !DAYS.find(x => x.d === d).slots ? `<p class="legs-t">${t('Pin your hotel on the Trip tab to start and end the day there.')}</p>` : '')
+    + `<button class="sbtn" type="button" data-locate>${t(myLL ? 'Update where I am' : 'Show where I am')}</button>`
     + (opt ? `<button class="sbtn primary" type="button" data-optimize="${d}">${t('Use a shorter order (saves about {km})', { km: fmtKm(opt.save) })}</button>` : '');
   requestAnimationFrame(() => m.invalidateSize());
 }
@@ -151,7 +160,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-daymap]');
   if (b) { const d = +b.dataset.daymap; openDays.has(d) ? openDays.delete(d) : openDays.add(d); renderDays(); return; }
   const o = e.target.closest('[data-optimize]');
-  if (o) { const d = +o.dataset.optimize, best = bestOrder(d); if (!best) return; plan.items[d] = best.ids; savePlan(); renderDays(); toast(t('Reordered {day} to save about {km}', { day: dayLabel(d), km: fmtKm(best.save) })); }
+  if (o) { const d = +o.dataset.optimize, best = bestOrder(d), snap = planSnap(); if (!best) return; plan.items[d] = best.ids; savePlan(); renderDays(); undoToast(t('Reordered {day} to save about {km}', { day: dayLabel(d), km: fmtKm(best.save) }), () => planRestore(snap)); }
 });
 
 /* ---------- your stays: found from the address, or placed by tapping the map ---------- */

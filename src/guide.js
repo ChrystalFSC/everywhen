@@ -94,6 +94,82 @@ const sortKey = it => it.custom ? 5 : ({ morning: it.k === 'food' ? 0 : .5, half
 const cityRank = (d, it) => { const ix = (dayOf(d)?.cities || []).indexOf(it?.c); return ix < 0 ? 0 : ix; };
 const dayKey = (d, it) => cityRank(d, it) * 10 + sortKey(it || {});
 
+/* ---------- a day's clock: when each stop starts, and whether the place is open then ---------- */
+const hhmm = h => { const m = Math.round(h * 12) * 5; return String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+const WD = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+// OpenStreetMap opening hours on one weekday: null when unknown, [] when closed, else [[open, close], …] in hours.
+function hoursOn(spec, wd) {
+  if (!spec) return null;
+  if (/^24\/7$/.test(spec.trim())) return [[0, 24]];
+  let out = null;
+  for (const part of spec.split(/\s*;\s*/).filter(Boolean)) {
+    const m = part.match(/^((?:(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)(?:\s*-\s*(?:Mo|Tu|We|Th|Fr|Sa|Su))?\s*,?\s*)+)?(.*)$/);
+    const days = m[1], rest = m[2].trim();
+    let hit = !days;
+    if (days) for (const seg of days.split(',').map(s => s.trim()).filter(Boolean)) {
+      const [a, b] = seg.split('-').map(s => s.trim()), i = WD.indexOf(a), j = b ? WD.indexOf(b) : i;
+      if (i < 0 || j < 0) continue; // public holidays: not known here
+      if (i <= j ? wd >= i && wd <= j : wd >= i || wd <= j) hit = true;
+    }
+    const spans = [...rest.matchAll(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/g)].map(x => [+x[1] + x[2] / 60, +x[3] + x[4] / 60]).map(([a, b]) => [a, b <= a ? b + 24 : b]);
+    const off = /^(off|closed)$/i.test(rest);
+    if (!off && !spans.length) return null; // written in a form we can't read (Wikivoyage's free text)
+    if (!hit) continue;
+    out = off ? [] : [...(out || []), ...spans];
+  }
+  return out || [];
+}
+// Only single places have hours of their own; a dish or souvenir lists several shops.
+const hoursSpec = it => !it ? '' : it.custom ? it.info?.hours || '' : it.k === 'place' || it.auto ? DETAILS[it.id]?.hours || '' : '';
+function openWarn(it, d, start, end) {
+  const spans = hoursOn(hoursSpec(it), new Date(d * D).getUTCDay());
+  if (!spans) return '';
+  if (!spans.length) return t('Closed on {day}. Move it to another day.', { day: new Intl.DateTimeFormat(LOCALE(), { weekday: 'long', timeZone: 'UTC' }).format(d * D) });
+  const cur = spans.find(([a, b]) => start >= a - .01 && start < b);
+  if (!cur) { const nxt = spans.find(([a]) => a > start); return nxt ? t('Opens at {time}, after you get there.', { time: hhmm(nxt[0]) }) : t('Closes at {time}, before you get there.', { time: hhmm(spans.at(-1)[1]) }); }
+  return end > cur[1] + .25 ? t('Closes at {time}. Go earlier, or allow less time.', { time: hhmm(cur[1]) }) : '';
+}
+// When sightseeing can start in a city on a day: 09:00 on a full day, otherwise once you've landed and reached town.
+function cityStart(x, city) {
+  const trip = CITIES[city]?.kind === 'daytrip' ? (CITIES[city].hrs || 0) / 2 - .5 : 0;
+  const w = dayWindows(x.d).find(w => w.key === city || (SATELLITES[w.key] || []).includes(city));
+  if (w) return Math.ceil(((w.full ? 9 : w.startH) + trip) * 4) / 4;
+  const s = STOPS.find(s => ckey(s.code) === city && eday(s.t0, CITY[s.code].tz) === x.d);
+  return s ? Math.ceil(((s.t0 - dayAt(x.d, CITY[s.code].tz, 0)) / H + 1) * 4) / 4 : 9;
+}
+// Meals and evening sights aren't put before their time of day, while the day is still in its usual order.
+const notBefore = it => it.custom ? 0 : it.k === 'food' ? (it.when === 'evening' ? 18 : it.when === 'morning' ? 0 : 11.5) : it.k === 'buy' ? 0 : it.when === 'evening' ? 17 : it.when === 'afternoon' ? 13 : 0;
+const pointOf = it => { try { return pointLL(itemPoint(it)); } catch { return null; } };
+const hopMins = d => d <= 1.4 ? Math.max(5, d / 4.8 * 60) : 10 + d / 22 * 60;
+// Each stop's start and end (hours on the local clock), the trip from the stop before, and any opening-hours problem.
+function daySchedule(x) {
+  const its = (plan.items[x.d] || []).map(getItem), out = [];
+  let tm = null, prev, city = null;
+  its.forEach((it, i) => {
+    if (!it) { out.push(null); return; }
+    const c = it.custom ? null : it.c, inDay = !!c && x.cities.includes(c), ll = pointOf(it);
+    let hop = null;
+    if (tm === null || (inDay && city && c !== city)) { const s = cityStart(x, inDay ? c : x.cities[0]); tm = tm === null ? s : Math.max(tm, s); }
+    else {
+      let d = null; try { d = prev && ll ? legKm(prev, ll) : null; } catch {}
+      if (d !== null && d >= .15 && d <= FAR_KM) hop = d;
+      tm += Math.round((d === null ? 20 : d > FAR_KM ? 0 : hopMins(d)) / 5) * 5 / 60;
+    }
+    if (inDay) city = c;
+    if (!its.slice(i + 1).some(o => o && dayKey(x.d, o) < dayKey(x.d, it))) tm = Math.max(tm, notBefore(it));
+    const start = tm, end = tm + (it.hrs || 1);
+    out.push({ start, end, hop, warn: openWarn(it, x.d, start, end) });
+    tm = end; prev = ll;
+  });
+  return out;
+}
+// Today's day number while the trip is under way, else null.
+function liveNow() { const n = Date.now(); return n >= TRIP_START && n <= TRIP_END ? n : null; }
+function todayD() { const n = liveNow(); if (n == null) return null; const s = segAtTime(n); return eday(n, CITY[s.kind === 'air' ? LEGS[s.leg].to : s.city].tz); }
+// Undo: the plan as it was a moment ago.
+const planSnap = () => JSON.stringify(plan);
+function planRestore(snap) { plan = JSON.parse(snap); savePlan(); renderBuilder(); renderDays(); renderExplore(); }
+
 // Plan scoring, shared by the full planner and by filling in one city when its guide arrives.
 const planScore = (it, prefs) => it.tier * 10 + it.tags.filter(t => prefs.interests.includes(t)).length * 4;
 const planFits = (it, win, budget) => win === 'full' ? it.when !== 'full' && (it.when !== 'half' || budget >= 7) : win === 'evening' ? ['evening','any'].includes(it.when) : ['morning','any'].includes(it.when);
@@ -166,9 +242,10 @@ $('#bPace').addEventListener('click', e => { const b = e.target.closest('button'
 $('#bInt').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const s = new Set(plan.prefs.interests); s.has(b.dataset.v) ? s.delete(b.dataset.v) : s.add(b.dataset.v); plan.prefs.interests = [...s]; plan.dirty = true; savePlan(); renderBuilder(); });
 $('#bTrips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const s = new Set(plan.prefs.trips); s.has(b.dataset.v) ? s.delete(b.dataset.v) : s.add(b.dataset.v); plan.prefs.trips = DAYTRIP_KEYS.filter(k => s.has(k)); plan.dirty = true; savePlan(); renderBuilder(); });
 $('#bBuild').addEventListener('click', () => {
+  const snap = planSnap(), had = Object.values(plan.items).flat().length;
   buildPlan(plan.prefs); renderBuilder(); renderDays(); renderExplore();
-  const n = Object.values(plan.items).flat().length;
-  toast(t('Built a {pace} plan with {n} stops', { pace: t(plan.prefs.pace), n }));
+  const n = Object.values(plan.items).flat().length, msg = t('Built a {pace} plan with {n} stops', { pace: t(plan.prefs.pace), n });
+  had ? undoToast(msg, () => planRestore(snap)) : toast(msg);
   if (!reduced) $$('#days .dayc').forEach((c, i) => { c.style.animation = 'none'; void c.offsetWidth; c.style.animation = `rise .55s var(--ease) ${i * 60}ms both`; });
 });
 let clearArm = 0;
@@ -176,7 +253,9 @@ $('#planClear').addEventListener('click', e => {
   const b = e.currentTarget;
   if (!clearArm) { b.textContent = t('Tap again to clear'); clearArm = setTimeout(() => { clearArm = 0; b.textContent = t('Clear all stops'); }, 3000); return; }
   clearTimeout(clearArm); clearArm = 0; b.textContent = t('Clear all stops');
+  const snap = planSnap(), n = Object.values(plan.items).flat().length;
   DAYS.forEach(x => plan.items[x.d] = []); plan.notes = ['Plan cleared. Add stops from Explore, or build a new plan.']; savePlan(); renderBuilder(); renderDays(); renderExplore();
+  if (n) undoToast(t(n === 1 ? 'Cleared 1 stop' : 'Cleared {n} stops', { n }), () => planRestore(snap));
 });
 
 /* ---------- day cards ---------- */
@@ -204,6 +283,7 @@ function stayNotes(d) {
 function renderDays() {
   const host = $('#days'); if (!host) return;
   let total = 0;
+  const today = todayD(), planned = new Set(Object.values(plan.items).flat());
   host.innerHTML = DAYS.map(x => {
     const items = plan.items[x.d] || [], hrs = items.reduce((a, id) => a + (getItem(id)?.hrs || 0), 0); total += items.length;
     const cities = x.cities, nk = cities[cities.length - 1], w = dayWx(nk, x.d);
@@ -213,27 +293,31 @@ function renderDays() {
     const baseSel = x.slots ? `<span>${cities.map(cityName).join(' → ')}</span>` : `<label class="sr" for="base-${x.d}">${t('Where on {day}', { day: dayLabel(x.d) })}</label><select class="sel base" id="base-${x.d}" data-base="${x.d}">${[x.city || 'sh', ...(x.city === 'sh' ? DAYTRIP_KEYS : []), ...Object.keys(plan.extra || {})].map(c => `<option value="${esc(c)}"${b === c ? ' selected' : ''}>${c === x.city || (!x.city && c === 'sh') ? esc(cityName(c)) : t('Day trip: {city}', { city: cityName(c) })}</option>`).join('')}</select>`;
     const trip = !x.slots && CITIES[b].kind === 'daytrip';
     const rainy = w.live && w.p >= 60 && items.some(id => { const it = getItem(id); return it && it.k === 'place' && !it.indoor; });
-    const indoor = rainy ? ITEMS.filter(i => cities.includes(i.c) && i.indoor && !items.includes(i.id)).slice(0, 2).map(i => i.n) : [];
-    return `<article class="dayc${trip ? ' trip' : ''}" aria-label="${dayLabel(x.d)}">
+    const indoor = rainy ? ITEMS.filter(i => cities.includes(i.c) && i.k === 'place' && i.indoor && !planned.has(i.id)).sort((a, b) => b.tier - a.tier).slice(0, 2) : [];
+    const sch = daySchedule(x), ends = sch.filter(Boolean).at(-1)?.end, isToday = x.d === today;
+    return `<article class="dayc${trip ? ' trip' : ''}${isToday ? ' today' : ''}" id="day-${x.d}" aria-label="${dayLabel(x.d)}">
       <div class="day-h">
         <span class="dnum">${+isoDay(x.d).slice(8)}</span>
         <span class="dmeta"><b>${dayLabel(x.d)}</b>${baseSel}</span>
         ${w.hi === '–' ? '' : `<span class="wchip" title="${esc(w.label)}">${wIcon(w.code)}${w.hi}° / ${w.lo}°${w.live ? '' : ` <span style="color:var(--dim);font-weight:500">${t(PRE ? 'avg' : 'last yr')}</span>`}</span>`}
-        ${nightChip}
+        ${isToday ? `<span class="chip gold">${t('Today')}</span>` : ''}${nightChip}
       </div>
       <div class="day-b">
         ${[x.note && t(x.note), ...stayNotes(x.d)].filter(Boolean).map(n => `<div class="dnote">${esc(n)}</div>`).join('')}
-        ${rainy ? `<div class="dnote rain">${t('Rain is likely ({p}%).', { p: w.p })}${indoor.length ? ' ' + esc(t('Indoor ideas: {list}.', { list: indoor.map(n => t(n)).join(LANG === 'zh' ? '、' : ', ') })) : ''}</div>` : ''}
+        ${rainy ? `<div class="dnote rain"><span>${t('Rain is likely ({p}%).', { p: w.p })}${indoor.length ? ' ' + esc(t('Indoor ideas: {list}.', { list: indoor.map(nameOf).join(LANG === 'zh' ? '、' : ', ') })) : ''}</span></div>${indoor.length ? `<div class="rainswap">${indoor.map(i => `<button class="sbtn" type="button" data-rainswap="${x.d}:${i.id}">${t('Swap in {name}', { name: esc(nameOf(i)) })}</button>`).join('')}</div>` : ''}` : ''}
         ${(x.fixed || []).map(([no, r]) => `<div class="fixed">${planeIcon}<b>${no}</b><span>${r}</span></div>`).join('')}
         ${trip ? `<div class="fixed train">${trainIcon}<span><b>${esc(cityName(b))}</b> · ${esc(t(CITIES[b].train))} ${esc(t(CITIES[b].leave))} ${t('Book on Trip.com or 12306 and bring your passport to board.')}</span></div>` : ''}
         ${items.length ? items.map((id, i) => { const it = getItem(id); if (!it) return '';
           const away = !it.custom && !cities.includes(it.c);
-          return `<div class="item${it.custom ? ' own' : ''}">
+          const s = sch[i];
+          let hopTxt = ''; try { if (s?.hop != null) hopTxt = legText(s.hop); } catch {}
+          return `${hopTxt ? `<div class="ihop" aria-hidden="true">${esc(hopTxt)}</div>` : ''}<div class="item${it.custom ? ' own' : ''}${s?.warn ? ' warned' : ''}" data-d="${x.d}" data-i="${i}">
+            <button class="grip" type="button" data-grip tabindex="-1" aria-hidden="true" title="${t('Drag to reorder')}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg></button>
             ${PHOTOS[it.id] ? `<img class="thumb" src="${PHOTOS[it.id].src}" alt="" loading="lazy">` : it.info?.img ? `<img class="thumb" src="${esc(it.info.img)}" alt="" loading="lazy" crossorigin="anonymous">` : `<span class="thumb ph" aria-hidden="true">${esc((it.l || it.n).slice(0, 2))}</span>`}
-            <div class="imain"><div class="iname">${esc(it.custom ? it.n : nameOf(it))}${it.tier === 3 ? ' <span class="star" title="Top pick">★</span>' : ''}</div><div class="isub">${t(it.custom ? 'Your stop' : (it.k === 'food' ? 'Food' : it.k === 'buy' ? 'Souvenirs' : WHEN_LABEL[it.when]))} · ${t('about {h}', { h: fmtHrs(it.hrs) })}${away ? ` · <span style="color:var(--warn)">${t('not in {city} this day', { city: esc(cityName(it.c)) })}</span>` : ''}</div></div>
+            <div class="imain"><div class="iname">${esc(it.custom ? it.n : nameOf(it))}${it.tier === 3 ? ' <span class="star" title="Top pick">★</span>' : ''}</div><div class="isub">${s ? `<b class="itime">${hhmm(s.start)}</b> · ` : ''}${t(it.custom ? 'Your stop' : (it.k === 'food' ? 'Food' : it.k === 'buy' ? 'Souvenirs' : WHEN_LABEL[it.when]))} · ${t('about {h}', { h: fmtHrs(it.hrs) })}${away ? ` · <span style="color:var(--warn)">${t('not in {city} this day', { city: esc(cityName(it.c)) })}</span>` : ''}</div>${s?.warn ? `<div class="iwarn">${clockIcon}<span>${esc(s.warn)}</span></div>` : ''}</div>
             <div class="ictl">
-              <button class="ib" type="button" data-act="up" data-d="${x.d}" data-i="${i}" aria-label="${t('Move {n} earlier', { n: esc(it.n) })}"${i ? '' : ' disabled'}>↑</button>
-              <button class="ib" type="button" data-act="down" data-d="${x.d}" data-i="${i}" aria-label="${t('Move {n} later', { n: esc(it.n) })}"${i < items.length - 1 ? '' : ' disabled'}>↓</button>
+              <button class="ib kb" type="button" data-act="up" data-d="${x.d}" data-i="${i}" aria-label="${t('Move {n} earlier', { n: esc(it.n) })}"${i ? '' : ' disabled'}>↑</button>
+              <button class="ib kb" type="button" data-act="down" data-d="${x.d}" data-i="${i}" aria-label="${t('Move {n} later', { n: esc(it.n) })}"${i < items.length - 1 ? '' : ' disabled'}>↓</button>
               <select class="sel mv" data-act="move" data-d="${x.d}" data-i="${i}" aria-label="${t('Move {n} to another day', { n: esc(it.n) })}"><option value="">Move…</option>${DAYS.filter(y => y.d !== x.d).map(y => `<option value="${y.d}">${dayShort(y.d)}</option>`).join('')}</select>
               <button class="ib" type="button" data-act="rm" data-d="${x.d}" data-i="${i}" aria-label="${t('Remove {n}', { n: esc(it.n) })}">✕</button>
             </div></div>`; }).join('') : `<p class="empty">Nothing planned yet.</p>`}
@@ -243,9 +327,9 @@ function renderDays() {
           <span class="own-in" id="own-${x.d}" hidden><input class="txt" id="ownN-${x.d}" placeholder="e.g. Meet friends for dinner" aria-label="Your stop"><select class="sel" id="ownH-${x.d}" aria-label="How long">${[.5,1,1.5,2,3,4].map(h => `<option value="${h}"${h === 1.5 ? ' selected' : ''}>${fmtHrs(h)}</option>`).join('')}</select><button class="sbtn primary" type="button" data-own="${x.d}">Add</button></span>
         </div>
         <div class="ck-inline" id="cki-${x.d}" aria-live="polite"></div>
-        ${HAS_MAP ? `<button class="sbtn daymap-btn" type="button" data-daymap="${x.d}" aria-expanded="${openDays.has(x.d)}" aria-controls="dm-${x.d}">${mapIcon}${t(openDays.has(x.d) ? 'Hide map' : 'Map & distances')}</button>
-        ${openDays.has(x.d) ? `<div class="daymap" id="dm-${x.d}" role="region" aria-label="${t('Map of {day}', { day: dayLabel(x.d) })}"></div><div class="legs" id="dl-${x.d}" aria-live="polite"></div>` : ''}` : ''}
-        <div class="load${over ? ' over' : ''}"><span class="lb" aria-hidden="true"><i style="width:${Math.min(100, hrs / Math.max(.5, x.free) * 100)}%"></i></span><span>${over ? t('Too much for one day:') + ' ' : ''}${t('about {h} of {f} free', { h: fmtHrs(+hrs.toFixed(1)), f: fmtHrs(+x.free.toFixed(1)) })}</span></div>
+        <div class="dayacts">${HAS_MAP ? `<button class="sbtn daymap-btn" type="button" data-daymap="${x.d}" aria-expanded="${openDays.has(x.d)}" aria-controls="dm-${x.d}">${mapIcon}${t(openDays.has(x.d) ? 'Hide map' : 'Map & distances')}</button>` : ''}${items.length ? `<button class="sbtn" type="button" data-shareday="${x.d}">${t('Share this day')}</button>` : ''}</div>
+        ${HAS_MAP ? `${openDays.has(x.d) ? `<div class="daymap" id="dm-${x.d}" role="region" aria-label="${t('Map of {day}', { day: dayLabel(x.d) })}"></div><div class="legs" id="dl-${x.d}" aria-live="polite"></div>` : ''}` : ''}
+        <div class="load${over ? ' over' : ''}"><span class="lb" aria-hidden="true"><i style="width:${Math.min(100, hrs / Math.max(.5, x.free) * 100)}%"></i></span><span>${over ? t('Too much for one day:') + ' ' : ''}${t('about {h} of {f} free', { h: fmtHrs(+hrs.toFixed(1)), f: fmtHrs(+x.free.toFixed(1)) })}${ends ? ' · ' + t('ends about {time}', { time: hhmm(ends) }) : ''}</span></div>
       </div>
     </article>`;
   }).join('');
@@ -269,8 +353,8 @@ $('#days').addEventListener('click', e => {
     plan.items[d].push(id); savePlan(); renderDays(); toast(t('{name} added to {day}', { name: n, day: dayLabel(d) })); return;
   }
   const b = e.target.closest('button[data-act]'); if (!b) return;
-  const act = b.dataset.act, d = +b.dataset.d, i = +b.dataset.i, L = plan.items[d];
-  if (act === 'rm') L.splice(i, 1);
+  const act = b.dataset.act, d = +b.dataset.d, i = +b.dataset.i, L = plan.items[d], snap = planSnap();
+  if (act === 'rm') { const it = getItem(L.splice(i, 1)[0]); undoToast(t('Removed {n}', { n: it ? (it.custom ? it.n : nameOf(it)) : '' }), () => planRestore(snap)); }
   if (act === 'up' && i > 0) [L[i - 1], L[i]] = [L[i], L[i - 1]];
   if (act === 'down' && i < L.length - 1) [L[i + 1], L[i]] = [L[i], L[i + 1]];
   savePlan(); renderDays(); renderExplore();
@@ -278,31 +362,45 @@ $('#days').addEventListener('click', e => {
   ($(`#days button[data-act="${act}"][data-d="${d}"][data-i="${ni}"]:not([disabled])`) || $(`#add-d${d}`)).focus();
 });
 $('#days').addEventListener('change', e => {
-  const t = e.target;
-  if (t.dataset.base) {
-    const d = +t.dataset.base, c = t.value; plan.base[d] = c;
+  const el = e.target;
+  if (el.dataset.base) {
+    const d = +el.dataset.base, c = el.value, snap = planSnap(), n0 = plan.items[d].length; plan.base[d] = c;
     plan.items[d] = plan.items[d].filter(id => { const it = getItem(id); return it.custom || it.c === c; });
     savePlan(); renderDays(); renderExplore();
-    toast(c === 'sh' ? t('{day}: back in Shanghai', { day: dayLabel(d) }) : t('{day} is now a {city} day trip. Add stops below.', { day: dayLabel(d), city: cityName(c) }));
+    const msg = c === 'sh' ? t('{day}: back in Shanghai', { day: dayLabel(d) }) : t('{day} is now a {city} day trip. Add stops below.', { day: dayLabel(d), city: cityName(c) });
+    n0 > plan.items[d].length ? undoToast(msg, () => planRestore(snap)) : toast(msg);
     return;
   }
-  if (t.dataset.addsel) {
-    const d = +t.dataset.addsel, v = t.value;
+  if (el.dataset.addsel) {
+    const d = +el.dataset.addsel, v = el.value;
     if (v === '__own') { $('#own-' + d).hidden = false; $('#ownN-' + d).focus(); return; }
     if (!v) return;
     insertSorted(d, v); savePlan(); renderDays(); renderExplore(); toast(t('{name} added to {day}', { name: nameOf(BY[v]), day: dayLabel(d) })); $(`#add-d${d}`)?.focus(); return;
   }
-  if (t.dataset.act === 'move' && t.value) {
-    const d = +t.dataset.d, id = plan.items[d].splice(+t.dataset.i, 1)[0];
-    if (!plan.items[t.value].includes(id)) insertSorted(t.value, id);
-    savePlan(); renderDays(); toast(t('Moved to {day}', { day: dayLabel(t.value) }));
+  if (el.dataset.act === 'move' && el.value) {
+    const snap = planSnap(), d = +el.dataset.d, to = +el.value, id = plan.items[d].splice(+el.dataset.i, 1)[0];
+    if (!plan.items[to].includes(id)) insertSorted(to, id);
+    savePlan(); renderDays(); renderExplore(); undoToast(t('Moved to {day}', { day: dayLabel(to) }), () => planRestore(snap));
   }
+});
+// A rainy day: swap the outdoor sight closest in length for an indoor one.
+$('#days').addEventListener('click', e => {
+  const b = e.target.closest('[data-rainswap]'); if (!b) return;
+  const [ds, id] = b.dataset.rainswap.split(':'), d = +ds, L = plan.items[d], inn = BY[id], snap = planSnap();
+  const outs = L.map((x, i) => [getItem(x), i]).filter(([it]) => it && it.k === 'place' && !it.indoor).sort((p, q) => Math.abs(p[0].hrs - inn.hrs) - Math.abs(q[0].hrs - inn.hrs));
+  if (!outs.length || !inn) return;
+  const [out, ix] = outs[0]; L[ix] = id; savePlan(); renderDays(); renderExplore();
+  undoToast(t('Swapped {a} for {b}', { a: out.custom ? out.n : nameOf(out), b: nameOf(inn) }), () => planRestore(snap));
 });
 
 /* ---------- Explore ---------- */
 // Explore covers every city in the trip, plus the day-trip towns near a base city.
 const EXPLORE_KEYS = PRE ? ['sh', 'sz', 'hz', 'han', 'sgn'] : [...BASE_KEYS, ...DAYTRIP_KEYS, ...STOP_KEYS.filter(k => !BASE_KEYS.includes(k))];
 let xCity = EXPLORE_KEYS[0] || 'sh', xKind = 'place';
+// Search and filters for Explore, and where you are (set by Near me).
+let xQ = '', myLL = null; const xF = { top: false, fresh: false, indoor: false, near: false };
+const xHay = it => [it.n, it.l, it.custom ? '' : t(it.n), it.why && t(it.why), it.d && t(it.d), it.area, it.info?.addr, ...(it.spots || []).flatMap(s => [s.n, s.l])].filter(Boolean).join(' ').toLowerCase();
+const awayKm = it => { try { const p = pointLL(itemPoint(it)); return myLL && p ? km(myLL, p) : null; } catch { return null; } };
 const hasGuide = k => !!CTX[k];
 const PRICE_CLASS = ['', 'Budget', 'Mid-range', 'Splurge'];
 const RANK_HTML = $('#xRank').innerHTML;
@@ -376,7 +474,7 @@ function renderExplore() {
     : kind === 'buy' ? esc(t(BUY_TIP[xCity])) : kind === 'stay' ? esc(t(STAY_TIP[xCity])) : kind === 'skip' ? t('These are the tourist traps, scams and overrated spots we <b>don’t</b> recommend in {city}, and what to do instead.', { city: esc(cityName(xCity)) }) : t(CTX[xCity]);
   $('#xRank').hidden = kind === 'stay' || kind === 'skip';
   const g = $('#xGrid');
-  if (kind === 'stay' || kind === 'skip') renderExploreMap([], kind);
+  if (kind === 'stay' || kind === 'skip') { renderExploreMap([], kind); $('#xFind').hidden = true; }
   if (kind === 'stay') {
     g.innerHTML = (STAYS[xCity] || []).map((s, i) => s.auto ? `<article class="xcard">${cover({ id:`stay-${xCity}-${i}`, n:s.n, l:s.n }, 'stay')}<div class="xbody"><h3>${esc(s.n)}</h3>
       ${s.price ? `<div class="chips"><span class="chip gold">${esc(s.price.slice(0, 60))}</span></div>` : ''}${s.d ? `<p>${esc(s.d)}</p>` : ''}
@@ -392,10 +490,23 @@ function renderExplore() {
       <p><b>${t('Why:')}</b> ${esc(t(s.why))}</p><div class="instead"><b>${t('Instead:')}</b> ${esc(t(s.instead))}</div></div></article>`).join('');
     return;
   }
-  const inPlan = Object.entries(plan.items);
-  const list = ITEMS.filter(i => i.c === xCity && i.k === kind).map((it, ix) => ({ it, ix })).sort((a, b) => b.it.tier - a.it.tier || a.ix - b.ix).map(o => o.it);
-  const mine = mineList().filter(m => MINE_CITY(m.c) === xCity && mineKind(m) === kind), off = mine.length;
-  $('#xRank').hidden = !list.length;
+  const inPlan = Object.entries(plan.items), plannedIds = new Set(Object.values(plan.items).flat());
+  const q = xQ.trim().toLowerCase(), filtering = !!q || xF.top || xF.fresh || (xF.indoor && kind === 'place');
+  const keep = it => (!q || xHay(it).includes(q)) && (!xF.top || it.tier === 3) && (!xF.fresh || !plannedIds.has(it.id)) && (!xF.indoor || kind !== 'place' || !!it.indoor);
+  const nearBy = xF.near && myLL, byDist = (a, b) => (awayKm(a) ?? 1e9) - (awayKm(b) ?? 1e9);
+  const all = ITEMS.filter(i => i.c === xCity && i.k === kind).map((it, ix) => ({ it, ix })).sort((a, b) => b.it.tier - a.it.tier || a.ix - b.ix).map(o => o.it);
+  const allMine = mineList().filter(m => MINE_CITY(m.c) === xCity && mineKind(m) === kind);
+  const list = all.filter(keep), mine = allMine.filter(keep), off = mine.length;
+  if (nearBy) { list.sort(byDist); mine.sort(byDist); }
+  $('#xFind').hidden = !all.length && !allMine.length;
+  $('#xFiltIndoor').hidden = kind !== 'place';
+  $('#xRank').hidden = !list.length || nearBy;
+  if (filtering && !list.length && !mine.length) {
+    // Nothing here: say where else in this city the search does match.
+    const other = q ? [['place', 'Places'], ['food', 'Food'], ['buy', 'Souvenirs']].filter(([k]) => k !== kind).map(([k, label]) => [k, label, ITEMS.filter(i => i.c === xCity && i.k === k && xHay(i).includes(q)).length]).filter(o => o[2]) : [];
+    g.innerHTML = `<div class="mine-empty glass"><b>${t('No matches.')}</b><p>${q ? t('Nothing in {city} matches “{q}” here.', { city: esc(cityName(xCity)), q: esc(xQ.trim()) }) : t('No places match these filters.')}</p><div class="acts">${other.map(([k, label, n]) => `<button class="sbtn primary" type="button" data-xkind="${k}">${t('{n} in {kind}', { n, kind: t(label) })}</button>`).join('')}<button class="sbtn" type="button" data-xclear>${t('Clear search and filters')}</button></div></div>`;
+    renderExploreMap([], kind); return;
+  }
   if (!list.length && !mine.length) {
     g.innerHTML = `<div class="mine-empty glass"><b>${t('Nothing here yet.')}</b><p>${t('Places you add in {city} with Can I go to…? on the Plan tab will appear here with their details.', { city: esc(cityName(xCity)) })}</p></div>`;
     renderExploreMap([], kind); return;
@@ -403,11 +514,11 @@ function renderExplore() {
   g.innerHTML = mine.map(mineCard).join('') + list.map((it, i) => {
     const ix = i + off, dt = DETAILS[it.id] || {};
     const pinned = kind === 'place' || it.auto ? !!COORDS[it.id] : (it.spots || []).some((s, k) => spotLL(it, k));
-    const on = inPlan.filter(([, ids]) => ids.includes(it.id)).map(([d]) => dayShort(+d));
+    const on = inPlan.filter(([, ids]) => ids.includes(it.id)).map(([d]) => dayShort(+d)), far = awayKm(it);
     const lng = CITIES[it.c].lang === 'zh' ? 'zh-CN' : it.auto ? phr(langOf(ccOfKey(it.c))).speech : 'vi';
     return `<article class="xcard" data-id="${it.id}">${cover(it)}<div class="xbody">
       <div><h3>${HAS_MAP && pinned ? `<button class="xnum" type="button" data-fly="${it.id}" title="${t('Show on map')}" aria-label="${t('Show {n} on the map', { n: esc(nameOf(it)) })}">${ix + 1}</button>` : ''}${esc(nameOf(it))}</h3>${LANG === 'zh' && hasCJK(it.l) ? `<div class="local">${esc(it.n)}</div>` : it.l !== it.n ? `<div class="local" lang="${lng}">${esc(it.l)}</div>` : ''}</div>
-      <div class="chips">${it.k === 'place' ? `<span class="chip out">${t(WHEN_LABEL[it.when])}</span><span class="chip">${fmtHrs(it.hrs)}</span>` : it.auto ? (it.pc ? `<span class="chip gold">${t(PRICE_CLASS[it.pc])}</span>` : '') + (it.price ? `<span class="chip">${esc(it.price.slice(0, 40))}</span>` : '') : it.spots?.length ? `<span class="chip gold">${priceText(it.c, [Math.min(...it.spots.map(s => s.p[0])), Math.max(...it.spots.map(s => s.p[1]))], it.unit)}</span>` : ''}${it.area ? `<span class="chip">${esc(it.area)}</span>` : ''}${on.length ? `<span class="chip good">${t('In plan · {days}', { days: on.join(', ') })}</span>` : ''}</div>
+      <div class="chips">${it.k === 'place' ? `<span class="chip out">${t(WHEN_LABEL[it.when])}</span><span class="chip">${fmtHrs(it.hrs)}</span>` : it.auto ? (it.pc ? `<span class="chip gold">${t(PRICE_CLASS[it.pc])}</span>` : '') + (it.price ? `<span class="chip">${esc(it.price.slice(0, 40))}</span>` : '') : it.spots?.length ? `<span class="chip gold">${priceText(it.c, [Math.min(...it.spots.map(s => s.p[0])), Math.max(...it.spots.map(s => s.p[1]))], it.unit)}</span>` : ''}${it.area ? `<span class="chip">${esc(it.area)}</span>` : ''}${it.indoor && it.k === 'place' ? `<span class="chip">${t('Indoors')}</span>` : ''}${far != null && far < 150 ? `<span class="chip out">${t('{km} away', { km: fmtKm(far) })}</span>` : ''}${on.length ? `<span class="chip good">${t('In plan · {days}', { days: on.join(', ') })}</span>` : ''}</div>
       ${it.why ? `<p class="why">${esc(t(it.why))}</p>` : ''}
       ${it.d ? `<p>${esc(t(it.d))}</p>` : ''}
       ${it.tip ? `<div class="tip">${tipIcon}<span>${esc(t(it.tip))}</span></div>` : ''}
@@ -481,3 +592,17 @@ function syncCityButtons() {
   want.forEach(c => { if (!host.querySelector(`[data-v="${CSS.escape(c)}"]`)) host.insertAdjacentHTML('beforeend', `<button type="button" data-v="${esc(c)}" data-extra="1" aria-pressed="${xCity === c}">${esc(cityName(c))}</button>`); });
 }
 bindSeg('#xKind', v => { xKind = v; renderExplore(); });
+let xQT = 0;
+$('#xQ').addEventListener('input', e => { xQ = e.target.value; clearTimeout(xQT); xQT = setTimeout(renderExplore, 180); });
+function syncFilters() { $$('#xFilt [data-f]').forEach(b => b.setAttribute('aria-pressed', !!xF[b.dataset.f])); }
+$('#xFilt').addEventListener('click', async e => {
+  const b = e.target.closest('[data-f]'); if (!b) return;
+  const f = b.dataset.f;
+  if (f === 'near' && !xF.near && !(await locateMe())) return;
+  xF[f] = !xF[f]; syncFilters(); renderExplore();
+});
+$('#xGrid').addEventListener('click', e => {
+  const k = e.target.closest('[data-xkind]');
+  if (k) { xKind = k.dataset.xkind; $$('#xKind button').forEach(x => x.setAttribute('aria-pressed', x.dataset.v === xKind)); renderExplore(); return; }
+  if (e.target.closest('[data-xclear]')) { xQ = ''; $('#xQ').value = ''; xF.top = xF.fresh = xF.indoor = false; syncFilters(); renderExplore(); }
+});
