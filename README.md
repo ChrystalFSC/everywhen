@@ -72,6 +72,15 @@ flowchart LR
 
 ## On the trip
 
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/screens/today.jpg" alt="Today card for Saturday 20 February in Shanghai: five stops with times, Yu Garden marked Now, and a note that no hotel is booked for tonight"><br><sub><b>Today</b><br>What's on now, the next flight and tonight's hotel.</sub></td>
+    <td align="center" width="25%"><img src="docs/screens/plan-times.jpg" alt="Plan tab for Monday 22 February: each stop has a start time and a drag handle, with travel times between stops and a warning that the Propaganda Poster Art Centre is closed on Monday"><br><sub><b>Clock times</b><br>Start times, travel between stops, and a warning when a place is closed.</sub></td>
+    <td align="center" width="25%"><img src="docs/screens/explore-near.jpg" alt="Explore tab with a search box and filters, Nearest first switched on, and the Shanghai Museum card showing 260 m away"><br><sub><b>Search and Near me</b><br>Filter a city and sort it by distance from where you are.</sub></td>
+    <td align="center" width="25%"><img src="docs/screens/spending.jpg" alt="Money tab's Trip spending: a 240 yuan bill split between two people, a total of RM 328.55, and totals by category"><br><sub><b>Spending</b><br>A running total in your home currency, with bill splitting.</sub></td>
+  </tr>
+</table>
+
 | | What it does |
 |---|---|
 | **Today** | While you're travelling, the app opens on today: your stops with times, the next flight and when to be at the airport, and tonight's hotel with its driver card. |
